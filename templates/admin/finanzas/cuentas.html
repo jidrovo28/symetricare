@@ -1,0 +1,30 @@
+{% extends "base/admin_base.html" %}
+{% block title %}Estado de Cuentas{% endblock %}{% block n_fin %}active{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="fw-700 mb-0">Estado de Cuentas</h5>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-md-4"><div class="card p-3 text-center">
+    <div class="fw-700 fs-5">${{ total_cobrado|floatformat:2 }}</div><div class="small text-muted">Total cobrado</div>
+  </div></div>
+  <div class="col-md-4"><div class="card p-3 text-center">
+    <div class="fw-700 fs-5 text-success">${{ total_pagado|floatformat:2 }}</div><div class="small text-muted">Total pagado</div>
+  </div></div>
+  <div class="col-md-4"><div class="card p-3 text-center">
+    <div class="fw-700 fs-5 text-danger">${{ total_saldo|floatformat:2 }}</div><div class="small text-muted">Saldo pendiente</div>
+  </div></div>
+</div>
+<div class="card"><div class="card-body p-0"><div class="table-responsive">
+<table class="table table-hover mb-0"><thead><tr>
+  <th>Paciente</th><th class="text-end">Cobrado</th><th class="text-end">Pagado</th>
+  <th class="text-end">Saldo</th><th></th>
+</tr></thead><tbody>
+{% for c in listado %}<tr>
+  <td><a href="/pacientes/{{ c.paciente.pk }}/ficha/" class="text-decoration-none fw-500 small">{{ c.paciente.nombre_completo }}</a></td>
+  <td class="text-end">${{ c.total_cobrado|floatformat:2 }}</td>
+  <td class="text-end text-success">${{ c.total_pagado|floatformat:2 }}</td>
+  <td class="text-end fw-600 {% if c.saldo > 0 %}text-danger{% else %}text-success{% endif %}">${{ c.saldo|floatformat:2 }}</td>
+  <td><button class="btn btn-xs btn-light border" onclick="App.modal('/finanzas/',{action:'detalle',id:{{ c.pk }}})"><i class="bi bi-eye"></i></button></td>
+</tr>{% empty %}<tr><td colspan="5" class="text-center text-muted py-5">Sin cuentas</td></tr>{% endfor %}
+</tbody></table></div></div></div>{% endblock %}

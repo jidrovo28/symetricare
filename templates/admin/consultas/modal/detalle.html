@@ -1,0 +1,30 @@
+<div class="mb-3">
+  <div class="d-flex justify-content-between">
+    <strong>{{ con.paciente.nombre_completo }}</strong>
+    <span class="badge badge-{{ con.estado }}">{{ con.get_estado_display }}</span>
+  </div>
+  <small class="text-muted">{{ con.fecha_creacion|date:"d/m/Y H:i" }}</small>
+</div>
+{% if con.motivo_consulta %}<div class="mb-2"><strong class="small">Motivo:</strong><p class="small mb-0">{{ con.motivo_consulta }}</p></div>{% endif %}
+{% if con.observaciones %}<div class="mb-2"><strong class="small">Observaciones:</strong><p class="small mb-0">{{ con.observaciones }}</p></div>{% endif %}
+{% if con.diagnostico %}<div class="mb-2"><strong class="small">Diagnóstico:</strong><p class="small mb-0">{{ con.diagnostico }}</p></div>{% endif %}
+<div class="table-responsive mt-3">
+  <table class="table table-sm mb-0"><thead><tr><th>Tratamiento</th><th>Tipo</th><th class="text-end">Costo</th></tr></thead>
+  <tbody>{% for t in tratamientos %}<tr>
+    <td class="small">{{ t.servicio.nombre }}</td>
+    <td class="small text-muted">{{ t.tipo_servicio|default:"—" }}</td>
+    <td class="text-end">${{ t.costo|floatformat:2 }}</td>
+  </tr>{% endfor %}</tbody></table>
+</div>
+<div class="d-flex justify-content-between mt-2 pt-2 border-top">
+  <span class="small">Descuento:</span><span class="small">${{ con.descuento|floatformat:2 }}</span>
+</div>
+<div class="d-flex justify-content-between fw-600">
+  <span>Total:</span><span style="color:var(--primary)">${{ con.total|floatformat:2 }}</span>
+</div>
+<div class="d-flex justify-content-between">
+  <span class="small text-muted">Abono:</span><span class="small text-success">${{ con.abono|floatformat:2 }}</span>
+</div>
+<div class="d-flex justify-content-between fw-600 text-danger">
+  <span>Saldo:</span><span>${{ con.saldo|floatformat:2 }}</span>
+</div>

@@ -1,0 +1,272 @@
+{% extends "base/admin_base.html" %}
+{% block title %}Ficha — {{ pac.nombre_completo }}{% endblock %}
+{% block n_pac %}active{% endblock %}
+{% block modal_size %}modal-xl{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/pacientes/">Pacientes</a></li>
+<li class="breadcrumb-item active">{{ pac.nombre_completo }}</li>
+{% endblock %}
+
+{% block content %}
+<!-- Cabecera paciente -->
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="row align-items-center">
+      <div class="col-md-7">
+        <h5 class="fw-700 mb-1" style="color:var(--primary)">{{ pac.nombre_completo }}</h5>
+        <div class="d-flex flex-wrap gap-3 small text-muted">
+          <span><i class="bi bi-card-text me-1"></i>{{ pac.get_tipo_identificacion_display }}: <strong>{{ pac.identificacion }}</strong></span>
+          {% if pac.edad %}<span><i class="bi bi-calendar me-1"></i>{{ pac.edad }} años</span>{% endif %}
+          {% if pac.telefono %}<span><i class="bi bi-telephone me-1"></i>{{ pac.telefono }}</span>{% endif %}
+          {% if pac.email %}<span><i class="bi bi-envelope me-1"></i>{{ pac.email }}</span>{% endif %}
+          {% if pac.direccion %}<span><i class="bi bi-geo-alt me-1"></i>{{ pac.direccion }}</span>{% endif %}
+          <span><i class="bi bi-people me-1"></i>{{ pac.num_hijos }} hijo(s)</span>
+        </div>
+      </div>
+      <div class="col-md-5 text-md-end mt-3 mt-md-0">
+        {% if cuenta %}
+        <div class="d-flex gap-3 justify-content-md-end">
+          <div class="text-center"><div class="fw-700" style="color:#10b981">${{ cuenta.total_pagado|floatformat:2 }}</div><div class="small text-muted">Pagado</div></div>
+          <div class="text-center"><div class="fw-700 text-danger">${{ cuenta.saldo|floatformat:2 }}</div><div class="small text-muted">Saldo</div></div>
+          <div class="text-center"><div class="fw-700">${{ cuenta.total_cobrado|floatformat:2 }}</div><div class="small text-muted">Total cobrado</div></div>
+        </div>
+        {% endif %}
+        <div class="d-flex gap-2 justify-content-md-end mt-2">
+          <a href="/consultas/?action=nueva&paciente_id={{ pac.pk }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-clipboard2-plus me-1"></i>Nueva Consulta
+          </a>
+          <button class="btn btn-outline-primary btn-sm" onclick="App.modal('/citas/',{action:'add'})">
+            <i class="bi bi-calendar-plus me-1"></i>Agendar Cita
+          </button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="App.modal('/pacientes/',{action:'edit',id:{{ pac.pk }}})">
+            <i class="bi bi-pencil"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+<!-- COLUMNA IZQUIERDA: Antecedentes -->
+<div class="col-lg-4">
+
+  <!-- APF -->
+  <div class="ficha-section">
+    <div class="ficha-section-title"><i class="bi bi-people-fill"></i>Antecedentes Patológicos Familiares (APF)</div>
+    <div id="apf-list" class="mb-2">
+      {% for item in apf %}
+      <div class="d-flex justify-content-between align-items-start mb-1" id="apf-{{ item.pk }}">
+        <span class="small">{{ item.descripcion }}</span>
+        <button class="btn btn-xs btn-link text-danger p-0 ms-2" onclick="delAntecedente('apf',{{ item.pk }})"><i class="bi bi-x"></i></button>
+      </div>{% empty %}<p class="small text-muted mb-2">Sin registros</p>{% endfor %}
+    </div>
+    <div class="d-flex gap-1">
+      <input type="text" id="apf-input" class="form-control form-control-sm" placeholder="Descripción..." onkeypress="if(event.key==='Enter'){addAntecedente('apf');}">
+      <button class="btn btn-xs btn-primary" onclick="addAntecedente('apf')"><i class="bi bi-plus"></i></button>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div class="ficha-section">
+    <div class="ficha-section-title"><i class="bi bi-person-fill"></i>Antecedentes Patológicos Personales (APP)</div>
+    <div id="app-list" class="mb-2">
+      {% for item in app %}
+      <div class="d-flex justify-content-between align-items-start mb-1" id="app-{{ item.pk }}">
+        <div><span class="small">{{ item.descripcion }}</span>{% if item.fecha_diagnostico %}<br><span class="text-muted" style="font-size:.7rem">{{ item.fecha_diagnostico|date:"d/m/Y" }}</span>{% endif %}</div>
+        <button class="btn btn-xs btn-link text-danger p-0 ms-2" onclick="delAntecedente('app',{{ item.pk }})"><i class="bi bi-x"></i></button>
+      </div>{% empty %}<p class="small text-muted mb-2">Sin registros</p>{% endfor %}
+    </div>
+    <div class="row g-1">
+      <div class="col-7"><input type="text" id="app-input" class="form-control form-control-sm" placeholder="Descripción..."></div>
+      <div class="col-4"><input type="date" id="app-fecha" class="form-control form-control-sm" title="Fecha diagnóstico"></div>
+      <div class="col-1"><button class="btn btn-xs btn-primary w-100" onclick="addAntecedente('app')"><i class="bi bi-plus"></i></button></div>
+    </div>
+  </div>
+
+  <!-- Alergias -->
+  <div class="ficha-section">
+    <div class="ficha-section-title"><i class="bi bi-exclamation-triangle-fill" style="color:#ef4444"></i>Alergias</div>
+    <div id="alergias-list" class="mb-2 d-flex flex-wrap gap-1">
+      {% for item in alergias %}
+      <span class="tag-chip" id="alergia-{{ item.pk }}" style="background:#fee2e2;color:#b91c1c">
+        {{ item.descripcion }}<span class="remove ms-1" onclick="delAntecedente('alergia',{{ item.pk }},this)">×</span>
+      </span>{% empty %}{% endfor %}
+    </div>
+    <div class="d-flex gap-1">
+      <input type="text" id="alergias-input" class="form-control form-control-sm" placeholder="Alergia..." onkeypress="if(event.key==='Enter'){addAntecedente('alergia');}">
+      <button class="btn btn-xs btn-primary" onclick="addAntecedente('alergia')"><i class="bi bi-plus"></i></button>
+    </div>
+  </div>
+
+  <!-- Medicamentos -->
+  <div class="ficha-section">
+    <div class="ficha-section-title"><i class="bi bi-capsule"></i>Medicamentos actuales</div>
+    <div id="med-list" class="mb-2 d-flex flex-wrap gap-1">
+      {% for item in medicamentos %}<span class="tag-chip" id="med-{{ item.pk }}">{{ item.descripcion }}<span class="remove ms-1" onclick="delAntecedente('medicamento',{{ item.pk }},this)">×</span></span>{% endfor %}
+    </div>
+    <div class="d-flex gap-1">
+      <input type="text" id="med-input" class="form-control form-control-sm" placeholder="Medicamento..." onkeypress="if(event.key==='Enter'){addAntecedente('medicamento');}">
+      <button class="btn btn-xs btn-primary" onclick="addAntecedente('medicamento')"><i class="bi bi-plus"></i></button>
+    </div>
+  </div>
+
+  <!-- Suplementos -->
+  <div class="ficha-section">
+    <div class="ficha-section-title"><i class="bi bi-droplet-fill" style="color:#10b981"></i>Suplementos</div>
+    <div id="sup-list" class="mb-2 d-flex flex-wrap gap-1">
+      {% for item in suplementos %}<span class="tag-chip" id="sup-{{ item.pk }}" style="background:#d1fae5;color:#065f46">{{ item.descripcion }}<span class="remove ms-1" onclick="delAntecedente('suplemento',{{ item.pk }},this)">×</span></span>{% endfor %}
+    </div>
+    <div class="d-flex gap-1">
+      <input type="text" id="sup-input" class="form-control form-control-sm" placeholder="Suplemento..." onkeypress="if(event.key==='Enter'){addAntecedente('suplemento');}">
+      <button class="btn btn-xs btn-primary" onclick="addAntecedente('suplemento')"><i class="bi bi-plus"></i></button>
+    </div>
+  </div>
+
+  <!-- Hábitos -->
+  <div class="ficha-section">
+    <div class="ficha-section-title"><i class="bi bi-arrow-repeat"></i>Hábitos</div>
+    <div id="hab-list" class="mb-2 d-flex flex-wrap gap-1">
+      {% for item in habitos %}<span class="tag-chip" id="hab-{{ item.pk }}" style="background:#ede9fe;color:#5b21b6">{{ item.descripcion }}<span class="remove ms-1" onclick="delAntecedente('habito',{{ item.pk }},this)">×</span></span>{% endfor %}
+    </div>
+    <div class="d-flex gap-1">
+      <input type="text" id="hab-input" class="form-control form-control-sm" placeholder="Hábito..." onkeypress="if(event.key==='Enter'){addAntecedente('habito');}">
+      <button class="btn btn-xs btn-primary" onclick="addAntecedente('habito')"><i class="bi bi-plus"></i></button>
+    </div>
+  </div>
+
+  <!-- Actividad Física -->
+  <div class="ficha-section">
+    <div class="ficha-section-title"><i class="bi bi-lightning-fill" style="color:#f59e0b"></i>Actividad Física</div>
+    <div id="act-list" class="mb-2 d-flex flex-wrap gap-1">
+      {% for item in actividades %}<span class="tag-chip" id="act-{{ item.pk }}" style="background:#fef3c7;color:#92400e">{{ item.descripcion }}<span class="remove ms-1" onclick="delAntecedente('actividad',{{ item.pk }},this)">×</span></span>{% endfor %}
+    </div>
+    <div class="d-flex gap-1">
+      <input type="text" id="act-input" class="form-control form-control-sm" placeholder="Actividad..." onkeypress="if(event.key==='Enter'){addAntecedente('actividad');}">
+      <button class="btn btn-xs btn-primary" onclick="addAntecedente('actividad')"><i class="bi bi-plus"></i></button>
+    </div>
+  </div>
+
+</div>
+
+<!-- COLUMNA DERECHA: Historial -->
+<div class="col-lg-8">
+
+  <!-- Tratamientos realizados -->
+  <div class="ficha-section">
+    <div class="ficha-section-title"><i class="bi bi-check2-circle"></i>Tratamientos Realizados</div>
+    <div id="trat-list" class="mb-2">
+      {% for item in tratamientos_realizados %}
+      <div class="d-flex justify-content-between align-items-start mb-1 py-1 border-bottom" id="trat-{{ item.pk }}">
+        <div><span class="small">{{ item.descripcion }}</span>{% if item.fecha %}<span class="badge bg-light text-muted ms-2" style="font-size:.65rem">{{ item.fecha|date:"d/m/Y" }}</span>{% endif %}</div>
+        <button class="btn btn-xs btn-link text-danger p-0 ms-2" onclick="delAntecedente('tratamiento',{{ item.pk }})"><i class="bi bi-x"></i></button>
+      </div>{% empty %}<p class="small text-muted mb-2">Sin tratamientos registrados</p>{% endfor %}
+    </div>
+    <div class="row g-1">
+      <div class="col-8"><input type="text" id="trat-input" class="form-control form-control-sm" placeholder="Descripción del tratamiento..."></div>
+      <div class="col-3"><input type="date" id="trat-fecha" class="form-control form-control-sm"></div>
+      <div class="col-1"><button class="btn btn-xs btn-primary w-100" onclick="addAntecedente('tratamiento_realizado')"><i class="bi bi-plus"></i></button></div>
+    </div>
+  </div>
+
+  <!-- Historial de consultas -->
+  <div class="ficha-section">
+    <div class="ficha-section-title"><i class="bi bi-clipboard2-pulse"></i>Historial de Consultas</div>
+    {% for c in consultas %}
+    <div class="card mb-2 border-0" style="background:#f9fafb">
+      <div class="card-body py-2 px-3">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="small fw-600">{{ c.fecha_creacion|date:"d/m/Y H:i" }}</div>
+            <div class="small text-muted mt-1">{{ c.motivo_consulta|truncatechars:80 }}</div>
+            {% if c.diagnostico %}<div class="small mt-1"><strong>Dx:</strong> {{ c.diagnostico|truncatechars:100 }}</div>{% endif %}
+          </div>
+          <div class="text-end ms-3">
+            <div class="fw-700" style="color:var(--primary)">${{ c.total|floatformat:2 }}</div>
+            {% if c.saldo > 0 %}<div class="small text-danger">Saldo: ${{ c.saldo|floatformat:2 }}</div>{% endif %}
+            <span class="badge badge-{{ c.estado }} mt-1">{{ c.get_estado_display }}</span>
+          </div>
+        </div>
+        <div class="d-flex gap-2 mt-2">
+          <button class="btn btn-xs btn-outline-primary" onclick="loadDetalle({{ c.pk }})"><i class="bi bi-eye me-1"></i>Ver detalle</button>
+          {% if c.saldo > 0 %}<button class="btn btn-xs btn-success" onclick="App.modal('/consultas/',{action:'abonar',id:{{ c.pk }}})"><i class="bi bi-cash me-1"></i>Abonar</button>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% empty %}<p class="small text-muted">Sin consultas registradas</p>{% endfor %}
+    {% if consultas|length >= 10 %}
+    <a href="/consultas/?paciente={{ pac.pk }}" class="small text-primary">Ver todas →</a>
+    {% endif %}
+  </div>
+
+  <!-- Próximas citas -->
+  {% if citas %}
+  <div class="ficha-section">
+    <div class="ficha-section-title"><i class="bi bi-calendar-check"></i>Citas</div>
+    {% for c in citas %}
+    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+      <div><div class="small fw-500">{{ c.fecha|date:"d/m/Y" }} a las {{ c.hora|time:"H:i" }}</div>
+           <div class="small text-muted">{{ c.servicio|default:"Consulta" }}</div></div>
+      <span class="badge badge-{{ c.estado }}">{{ c.get_estado_display }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const PAC_ID = {{ pac.pk }};
+
+async function addAntecedente(tipo) {
+  const inputMap = {
+    'apf':'apf-input','app':'app-input','alergia':'alergias-input',
+    'medicamento':'med-input','suplemento':'sup-input','habito':'hab-input',
+    'actividad':'act-input','tratamiento_realizado':'trat-input'
+  };
+  const inp  = document.getElementById(inputMap[tipo]);
+  const desc = inp?.value?.trim();
+  if (!desc) { App.toast('Ingresa una descripción','warning'); return; }
+
+  const fd = new FormData();
+  fd.append('action', 'add_' + tipo);
+  fd.append('paciente_id', PAC_ID);
+  fd.append('descripcion', desc);
+  if (tipo === 'app') {
+    const f = document.getElementById('app-fecha')?.value;
+    if (f) fd.append('fecha_diagnostico', f);
+  }
+  if (tipo === 'tratamiento_realizado') {
+    const f = document.getElementById('trat-fecha')?.value;
+    if (f) fd.append('fecha', f);
+  }
+
+  const r = await fetch('/pacientes/', {method:'POST',body:fd,headers:{'X-CSRFToken':App.csrf()}});
+  const d = await r.json();
+  if (d.result) { App.toast('Guardado','success'); location.reload(); }
+  else App.toast(d.msg,'danger');
+}
+
+async function delAntecedente(tipo, id, chipEl) {
+  if (!confirm('¿Eliminar este registro?')) return;
+  const fd = new FormData();
+  fd.append('action','del_antecedente'); fd.append('tipo',tipo); fd.append('id',id);
+  const r = await fetch('/pacientes/', {method:'POST',body:fd,headers:{'X-CSRFToken':App.csrf()}});
+  const d = await r.json();
+  if (d.result) {
+    if (chipEl) chipEl.closest('.tag-chip, [id]')?.remove();
+    else location.reload();
+  } else App.toast(d.msg,'danger');
+}
+
+function loadDetalle(id) {
+  fetch('/consultas/?action=detalle&id='+id).then(r=>r.json()).then(d=>{
+    if(d.result){document.getElementById('mainModalBody').innerHTML=d.data;bootstrap.Modal.getOrCreateInstance(document.getElementById('mainModal')).show();}
+    else App.toast(d.msg,'danger');
+  });
+}
+</script>
+{% endblock %}

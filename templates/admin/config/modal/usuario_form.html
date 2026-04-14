@@ -1,0 +1,35 @@
+<form id="modalForm" action="/config/usuarios/" onsubmit="return false">{% csrf_token %}
+<input type="hidden" name="action" value="add">
+<div class="row g-2">
+  <div class="col-md-6"><label class="form-label small fw-600">Nombres</label>
+    <input type="text" name="first_name" class="form-control form-control-sm"></div>
+  <div class="col-md-6"><label class="form-label small fw-600">Apellidos</label>
+    <input type="text" name="last_name" class="form-control form-control-sm"></div>
+  <div class="col-md-6"><label class="form-label small fw-600">Usuario *</label>
+    <input type="text" name="username" class="form-control form-control-sm" required></div>
+  <div class="col-md-6"><label class="form-label small fw-600">Contraseña *</label>
+    <input type="password" name="password" class="form-control form-control-sm" value="Admin1234!" required></div>
+  <div class="col-md-6"><label class="form-label small fw-600">Email</label>
+    <input type="email" name="email" class="form-control form-control-sm"></div>
+  <div class="col-md-6"><label class="form-label small fw-600">Rol</label>
+    <select name="rol" class="form-select form-select-sm">
+      <option value="recepcion">Recepción</option>
+      <option value="medico">Médico/Especialista</option>
+      <option value="admin">Administrador</option>
+    </select></div>
+  <div class="col-12"><label class="form-label small fw-600">Módulos con acceso</label>
+    <div class="d-flex flex-wrap gap-2 mt-1">
+      {% for v,l in modulos %}
+      <div class="form-check"><input class="form-check-input" type="checkbox" name="modulos" value="{{ v }}" id="mod_{{ v }}">
+        <label class="form-check-label small" for="mod_{{ v }}">{{ l }}</label></div>
+      {% endfor %}
+    </div>
+    <div class="small text-muted mt-1">Los administradores tienen acceso a todos los módulos automáticamente.</div>
+  </div>
+</div>
+<div class="modal-footer px-0 pb-0 mt-3">
+  <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+  <button type="button" class="btn btn-primary btn-sm" onclick="App.submit(document.getElementById('modalForm'),d=>{App.toast(d.msg);bootstrap.Modal.getInstance(document.getElementById('mainModal'))?.hide();location.reload();})">
+    <i class="bi bi-save me-1"></i>Crear Usuario
+  </button>
+</div></form>

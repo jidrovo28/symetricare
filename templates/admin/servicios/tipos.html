@@ -1,0 +1,30 @@
+{% extends "base/admin_base.html" %}
+{% block title %}Tipos de Servicio{% endblock %}{% block n_tsrv %}active{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="fw-700 mb-0">Tipos de Servicio</h5>
+</div>
+<div class="row g-3">
+  <div class="col-lg-5"><div class="card"><div class="card-header">Nuevo Tipo</div>
+    <div class="card-body">
+      <form id="tipoForm" method="post" action="/servicios/tipos/" onsubmit="return false">{% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        <div class="mb-2"><label class="form-label small fw-600">Nombre *</label>
+          <input type="text" name="nombre" class="form-control form-control-sm" required></div>
+        <div class="mb-3"><label class="form-label small fw-600">Color</label>
+          <input type="color" name="color" value="#6366f1" class="form-control form-control-sm form-control-color"></div>
+        <button type="button" class="btn btn-primary btn-sm w-100" onclick="App.submit(document.getElementById('tipoForm'),()=>location.reload())">
+          <i class="bi bi-plus-lg me-1"></i>Agregar
+        </button>
+      </form>
+    </div></div></div>
+  <div class="col-lg-7"><div class="card"><div class="card-body p-0"><div class="table-responsive">
+    <table class="table table-hover mb-0"><thead><tr><th>Nombre</th><th>Color</th><th>Servicios</th><th></th></tr></thead>
+    <tbody>{% for t in listado %}<tr>
+      <td class="fw-500">{{ t.nombre }}</td>
+      <td><span class="badge" style="background:{{ t.color }}">{{ t.color }}</span></td>
+      <td class="small">{{ t.servicios.all|length }} servicios</td>
+      <td><button class="btn btn-xs btn-light border text-danger" onclick="App.delete('/servicios/tipos/',{{ t.pk }},undefined,()=>location.reload())"><i class="bi bi-trash"></i></button></td>
+    </tr>{% empty %}<tr><td colspan="4" class="text-center text-muted py-3">Sin tipos</td></tr>{% endfor %}
+    </tbody></table></div></div></div></div>
+</div>{% endblock %}

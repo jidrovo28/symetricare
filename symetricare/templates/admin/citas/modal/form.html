@@ -1,0 +1,83 @@
+<form id="modalForm" action="/citas/" onsubmit="return false">
+{% csrf_token %}
+<input type="hidden" name="action" value="add">
+<div class="row g-2">
+  <div class="col-12">
+    <label class="form-label small fw-600">Paciente *</label>
+    <div class="input-group">
+      <input type="text" id="buscarPacCita" class="form-control form-control-sm" placeholder="Buscar paciente...">
+    </div>
+    <input type="hidden" name="paciente_id" id="pacienteCitaId">
+    <div id="pacCitaInfo" class="small text-success mt-1 d-none"></div>
+    <div id="pacCitaResultados" class="list-group mt-1" style="max-height:150px;overflow-y:auto"></div>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label small fw-600">Fecha *</label>
+    <input type="date" name="fecha" id="citaFecha" class="form-control form-control-sm" required
+           onchange="cargarSlots(this.value)">
+  </div>
+  <div class="col-md-6">
+    <label class="form-label small fw-600">Hora *</label>
+    <select name="hora" class="form-select form-select-sm" required>
+      <option value="">— Seleccionar fecha primero —</option>
+    </select>
+  </div>
+  <div class="col-12">
+    <label class="form-label small fw-600">Servicio</label>
+    <select name="servicio_id" class="form-select form-select-sm">
+      <option value="">— Consulta General —</option>
+      {% for s in servicios %}<option value="{{ s.pk }}">{{ s.nombre }} — ${{ s.precio }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-12">
+    <label class="form-label small fw-600">Notas</label>
+    <textarea name="notas" class="form-control form-control-sm" rows="2" placeholder="Notas adicionales..."></textarea>
+  </div>
+</div>
+<div class="modal-footer px-0 pb-0 mt-3">
+  <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+  <button type="button" class="btn btn-primary btn-sm" onclick="App.submit(document.getElementById('modalForm'),d=>{App.toast(d.msg);bootstrap.Modal.getInstance(document.getElementById('mainModal'))?.hide();location.reload();})">
+    <i class="bi bi-calendar-check me-1"></i>Agendar Cita
+  </button>
+</div>
+</form>
+<script>
+const _searchP = App.debounce(async q => {
+  if (q.length < 2) return;
+  const r = await fetch('/pacientes/?action=buscar&q='+encodeURIComponent(q));
+  const d = await r.json();
+  const cont = document.getElementById('pacCitaResultados');
+  cont.innerHTML='';
+  (d.data||[]).forEach(p => {
+    const el = document.createElement('button');
+    el.type='button'; el.className='list-group-item list-group-item-action py-1';
+    el.innerHTML=`<div class="small fw-600">${p.nombre}</div><div class="text-muted" style="font-size:.7rem">${p.identificacion}</div>`;
+    el.onclick=()=>{
+      document.getElementById('pacienteCitaId').value=p.id;
+      document.getElementById('pacCitaInfo').textContent='✔ '+p.nombre;
+      document.getElementById('pacCitaInfo').classList.remove('d-none');
+      document.getElementById('buscarPacCita').value=p.nombre;
+      cont.innerHTML='';
+    };
+    cont.appendChild(el);
+  });
+},300);
+document.getElementById('buscarPacCita')?.addEventListener('input', e=>_searchP(e.target.value));
+
+async function cargarSlots(fecha) {
+  if (!fecha) return;
+  const fd=new FormData();
+  fd.append('action','slots_disponibles'); fd.append('fecha',fecha);
+  const r = await fetch('/citas/',{method:'POST',body:fd,headers:{'X-CSRFToken':App.csrf()}});
+  const d = await r.json();
+  const sel = document.querySelector('[name="hora"]');
+  if (!sel) return;
+  if (d.msg) { sel.innerHTML=`<option>${d.msg}</option>`; return; }
+  sel.innerHTML='<option value="">— Seleccionar hora —</option>';
+  (d.slots||[]).forEach(s=>{
+    const opt=document.createElement('option');
+    opt.value=s.hora; opt.textContent=s.hora+(s.libre?'':' (ocupado)');
+    opt.disabled=!s.libre; sel.appendChild(opt);
+  });
+}
+</script>

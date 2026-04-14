@@ -1,0 +1,37 @@
+{% extends "base/admin_base.html" %}
+{% block title %}Consultas{% endblock %}{% block n_con %}active{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="fw-700 mb-0">Consultas</h5>
+  <a href="/consultas/?action=nueva" class="btn btn-primary btn-sm"><i class="bi bi-clipboard2-plus me-1"></i>Nueva Consulta</a>
+</div>
+<div class="card mb-3"><div class="card-body py-2">
+  <form method="get" class="d-flex gap-2">
+    <input type="text" name="s" value="{{ s }}" class="form-control form-control-sm" placeholder="Paciente, cédula..." style="max-width:300px">
+    <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-search"></i></button>
+    <a href="/consultas/" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x"></i></a>
+  </form>
+</div></div>
+<div class="card"><div class="card-body p-0"><div class="table-responsive">
+<table class="table table-hover mb-0"><thead><tr>
+  <th>Paciente</th><th>Motivo</th><th>Diagnóstico</th>
+  <th class="text-end">Total</th><th class="text-end">Abono</th><th class="text-end">Saldo</th>
+  <th>Estado</th><th></th>
+</tr></thead><tbody>
+{% for c in listado %}<tr>
+  <td><a href="/pacientes/{{ c.paciente.pk }}/ficha/" class="text-decoration-none fw-500 small">{{ c.paciente.nombre_completo|truncatechars:28 }}</a>
+      <div class="text-muted" style="font-size:.7rem">{{ c.fecha_creacion|date:"d/m/Y H:i" }}</div></td>
+  <td class="small">{{ c.motivo_consulta|truncatechars:40 }}</td>
+  <td class="small text-muted">{{ c.diagnostico|truncatechars:35|default:"—" }}</td>
+  <td class="text-end fw-600">${{ c.total|floatformat:2 }}</td>
+  <td class="text-end">${{ c.abono|floatformat:2 }}</td>
+  <td class="text-end {% if c.saldo > 0 %}text-danger fw-600{% endif %}">${{ c.saldo|floatformat:2 }}</td>
+  <td><span class="badge badge-{{ c.estado }}">{{ c.get_estado_display }}</span></td>
+  <td><div class="d-flex gap-1">
+    <button class="btn btn-xs btn-light border" onclick="App.modal('/consultas/',{action:'detalle',id:{{ c.pk }}})" title="Ver"><i class="bi bi-eye"></i></button>
+    {% if c.saldo > 0 %}<button class="btn btn-xs btn-success" onclick="App.modal('/consultas/',{action:'abonar',id:{{ c.pk }}})" title="Abonar"><i class="bi bi-cash"></i></button>{% endif %}
+    <button class="btn btn-xs btn-light border text-danger" onclick="App.delete('/consultas/',{{ c.pk }},undefined,()=>location.reload())" title="Eliminar"><i class="bi bi-trash"></i></button>
+  </div></td>
+</tr>{% empty %}<tr><td colspan="8" class="text-center text-muted py-5">Sin consultas</td></tr>{% endfor %}
+</tbody></table></div></div></div>
+{% include "base/paginacion.html" %}{% endblock %}

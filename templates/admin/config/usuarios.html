@@ -1,0 +1,32 @@
+{% extends "base/admin_base.html" %}
+{% block title %}Usuarios{% endblock %}{% block n_usr %}active{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="fw-700 mb-0">Usuarios del Sistema</h5>
+  <button class="btn btn-primary btn-sm" onclick="App.modal('/config/usuarios/',{action:'add'})">
+    <i class="bi bi-person-plus me-1"></i>Nuevo Usuario
+  </button>
+</div>
+<div class="card"><div class="card-body p-0"><div class="table-responsive">
+<table class="table table-hover mb-0"><thead><tr>
+  <th>Usuario</th><th>Nombre</th><th>Rol</th><th>Módulos</th><th>Estado</th><th></th>
+</tr></thead><tbody>
+{% for u in listado %}<tr>
+  <td><code class="small">{{ u.username }}</code></td>
+  <td class="small fw-500">{{ u.nombre_completo }}</td>
+  <td><span class="badge bg-primary bg-opacity-10 text-primary">{{ u.get_rol_display }}</span></td>
+  <td>{% if u.es_admin %}<span class="badge bg-success bg-opacity-10 text-success">Todos</span>
+      {% else %}{% for m in u.modulos_permitidos %}<span class="badge bg-light text-muted me-1">{{ m }}</span>{% empty %}<span class="text-muted small">Sin acceso</span>{% endfor %}{% endif %}</td>
+  <td>{% if u.activo_sistema %}<span class="badge bg-success bg-opacity-10 text-success">Activo</span>
+      {% else %}<span class="badge bg-danger bg-opacity-10 text-danger">Inactivo</span>{% endif %}</td>
+  <td><div class="d-flex gap-1">
+    <button class="btn btn-xs btn-light border" onclick="App.modal('/config/usuarios/',{action:'permisos',id:{{ u.pk }}})" title="Permisos"><i class="bi bi-shield-lock"></i></button>
+    <form method="post" action="/config/usuarios/" class="d-inline">{% csrf_token %}
+      <input type="hidden" name="action" value="toggle"><input type="hidden" name="id" value="{{ u.pk }}">
+      <button type="submit" class="btn btn-xs btn-light border" title="Activar/Desactivar">
+        <i class="bi bi-toggle-{% if u.activo_sistema %}on text-success{% else %}off text-danger{% endif %}"></i>
+      </button>
+    </form>
+  </div></td>
+</tr>{% empty %}<tr><td colspan="6" class="text-center text-muted py-5">Sin usuarios</td></tr>{% endfor %}
+</tbody></table></div></div></div>{% endblock %}

@@ -1,0 +1,51 @@
+<div class="mb-3">
+    <strong>{{ cuenta.paciente.nombre_completo }}</strong>
+    <div class="row g-2 mt-1">
+        <div class="col-4 text-center">
+            <div class="fw-700">${{ cuenta.total_cobrado|floatformat:2 }}</div>
+            <div class="small text-muted">Cobrado</div>
+        </div>
+        <div class="col-4 text-center">
+            <div class="fw-700 text-success">${{ cuenta.total_pagado|floatformat:2 }}</div>
+            <div class="small text-muted">Pagado</div>
+        </div>
+        <div class="col-4 text-center">
+            <div class="fw-700 text-danger">${{ cuenta.saldo|floatformat:2 }}</div>
+            <div class="small text-muted">Saldo</div>
+        </div>
+    </div>
+</div>
+<div class="table-responsive">
+    <table class="table table-sm">
+        <thead>
+        <tr>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Descripción</th>
+            <th class="text-end">Monto</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for m in movimientos %}
+            <tr>
+                <td class="small text-muted">{{ m.fecha_creacion|date:"d/m/Y" }}</td>
+                <td>
+                    {% if m.tipo == 'abono' %}
+                        <span class="badge bg-success bg-opacity-10 text-success">
+                    {% else %}
+                        <span class="badge bg-primary bg-opacity-10 text-primary">
+                    {% endif %}
+                    {{ m.get_tipo_display }}
+                    </span>
+                </td>
+                <td class="small">{{ m.descripcion }}</td>
+                <td class="text-end fw-600">${{ m.monto|floatformat:2 }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="4" class="text-muted text-center py-2">Sin movimientos</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>

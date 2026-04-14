@@ -1,0 +1,38 @@
+<form id="modalForm" action="/pacientes/" onsubmit="return false">
+{% csrf_token %}
+<input type="hidden" name="action" value="{% if pac %}edit{% else %}add{% endif %}">
+{% if pac %}<input type="hidden" name="id" value="{{ pac.pk }}">{% endif %}
+<div class="row g-2">
+  <div class="col-md-4"><label class="form-label small fw-600">Tipo ID</label>
+    <select name="tipo_identificacion" class="form-select form-select-sm">
+      <option value="cedula" {% if not pac or pac.tipo_identificacion == 'cedula' %}selected{% endif %}>Cédula</option>
+      <option value="pasaporte" {% if pac.tipo_identificacion == 'pasaporte' %}selected{% endif %}>Pasaporte</option>
+      <option value="ruc" {% if pac.tipo_identificacion == 'ruc' %}selected{% endif %}>RUC</option>
+    </select></div>
+  <div class="col-md-8"><label class="form-label small fw-600">Identificación *</label>
+    <input type="text" name="identificacion" value="{{ pac.identificacion|default:'' }}" class="form-control form-control-sm" required {% if pac %}readonly{% endif %}></div>
+  <div class="col-md-5"><label class="form-label small fw-600">Nombres *</label>
+    <input type="text" name="nombres" value="{{ pac.nombres|default:'' }}" class="form-control form-control-sm" required></div>
+  <div class="col-md-4"><label class="form-label small fw-600">Apellido 1 *</label>
+    <input type="text" name="apellido1" value="{{ pac.apellido1|default:'' }}" class="form-control form-control-sm" required></div>
+  <div class="col-md-3"><label class="form-label small fw-600">Apellido 2</label>
+    <input type="text" name="apellido2" value="{{ pac.apellido2|default:'' }}" class="form-control form-control-sm"></div>
+  <div class="col-md-4"><label class="form-label small fw-600">Teléfono</label>
+    <input type="text" name="telefono" value="{{ pac.telefono|default:'' }}" class="form-control form-control-sm"></div>
+  <div class="col-md-4"><label class="form-label small fw-600">Fecha de nacimiento</label>
+    <input type="date" name="fecha_nacimiento" value="{{ pac.fecha_nacimiento|date:'Y-m-d'|default:'' }}" class="form-control form-control-sm"></div>
+  <div class="col-md-4"><label class="form-label small fw-600">Edad</label>
+    <input type="number" name="edad" value="{{ pac.edad|default:'' }}" class="form-control form-control-sm" min="0" max="120"></div>
+  <div class="col-md-6"><label class="form-label small fw-600">Email</label>
+    <input type="email" name="email" value="{{ pac.email|default:'' }}" class="form-control form-control-sm"></div>
+  <div class="col-md-6"><label class="form-label small fw-600">Nº Hijos</label>
+    <input type="number" name="num_hijos" value="{{ pac.num_hijos|default:'0' }}" class="form-control form-control-sm" min="0"></div>
+  <div class="col-12"><label class="form-label small fw-600">Dirección</label>
+    <textarea name="direccion" class="form-control form-control-sm" rows="2">{{ pac.direccion|default:'' }}</textarea></div>
+</div>
+<div class="modal-footer px-0 pb-0 mt-3">
+  <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+  <button type="button" class="btn btn-primary btn-sm" onclick="App.submit(document.getElementById('modalForm'), d=>{App.toast(d.msg); bootstrap.Modal.getInstance(document.getElementById('mainModal'))?.hide(); location.reload();})">
+    <i class="bi bi-save me-1"></i>Guardar
+  </button>
+</div></form>

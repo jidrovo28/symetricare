@@ -1,0 +1,62 @@
+{% extends "base/admin_base.html" %}
+{% block title %}Citas{% endblock %}{% block n_cit %}active{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="fw-700 mb-0">Gestión de Citas</h5>
+  <div class="d-flex gap-2">
+    <a href="/citas/calendario/" class="btn btn-outline-primary btn-sm"><i class="bi bi-calendar3 me-1"></i>Calendario</a>
+    <button class="btn btn-primary btn-sm" onclick="App.modal('/citas/',{action:'add'})">
+      <i class="bi bi-calendar-plus me-1"></i>Nueva Cita
+    </button>
+  </div>
+</div>
+
+<div class="card mb-3"><div class="card-body py-2">
+  <div class="d-flex gap-2 flex-wrap align-items-center">
+    <span class="small text-muted fw-600">Filtrar:</span>
+    <a href="/citas/" class="btn btn-sm {% if not estado %}btn-primary{% else %}btn-outline-secondary{% endif %}">Todas</a>
+    {% for v,l in estados %}
+    <a href="/citas/?estado={{ v }}" class="btn btn-sm {% if estado == v %}btn-primary{% else %}btn-outline-secondary{% endif %}">{{ l }}</a>
+    {% endfor %}
+  </div>
+</div></div>
+
+<div class="card"><div class="card-body p-0"><div class="table-responsive">
+<table class="table table-hover mb-0"><thead><tr>
+  <th>Fecha</th><th>Hora</th><th>Paciente</th><th>Servicio</th><th>Estado</th><th>Notas</th><th></th>
+</tr></thead><tbody>
+{% for c in listado %}<tr>
+  <td class="fw-600 small">{{ c.fecha|date:"d/m/Y" }}</td>
+  <td class="small">{{ c.hora|time:"H:i" }}</td>
+  <td><div class="small fw-500">{{ c.paciente.nombre_completo|truncatechars:28 }}</div>
+      <div class="text-muted" style="font-size:.7rem">{{ c.paciente.telefono|default:"" }}</div></td>
+  <td class="small">{{ c.servicio|default:"—" }}</td>
+  <td>
+    <select class="form-select form-select-sm" style="width:auto"
+            onchange="cambiarEstado({{ c.pk }},this.value)">
+      {% for v,l in c.ESTADO_CHOICES %}
+        <option value="{{ v }}" {% if c.estado == v %}selected{% endif %}>{{ l }}</option>
+      {% endfor %}
+    </select>
+  </td>
+  <td class="small text-muted">{{ c.notas|truncatechars:35|default:"—" }}</td>
+  <td><div class="d-flex gap-1">
+    <button class="btn btn-xs btn-light border" onclick="App.modal('/citas/',{action:'detalle',id:{{ c.pk }}})" title="Ver"><i class="bi bi-eye"></i></button>
+    <a href="/consultas/?action=nueva&paciente_id={{ c.paciente.pk }}" class="btn btn-xs btn-primary" title="Nueva consulta"><i class="bi bi-clipboard2-plus"></i></a>
+    <button class="btn btn-xs btn-light border text-danger" onclick="App.delete('/citas/',{{ c.pk }},undefined,()=>location.reload())" title="Eliminar"><i class="bi bi-trash"></i></button>
+  </div></td>
+</tr>{% empty %}<tr><td colspan="7" class="text-center text-muted py-5">Sin citas próximas</td></tr>{% endfor %}
+</tbody></table></div></div></div>
+{% include "base/paginacion.html" %}{% endblock %}
+
+{% block extra_js %}
+<script>
+async function cambiarEstado(id, estado) {
+  const fd = new FormData();
+  fd.append('action','cambiar_estado'); fd.append('id',id); fd.append('estado',estado);
+  const r = await fetch('/citas/',{method:'POST',body:fd,headers:{'X-CSRFToken':App.csrf()}});
+  const d = await r.json();
+  if (!d.result) App.toast(d.msg,'danger');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,22 @@
+<div class="mb-3">
+  <div class="d-flex justify-content-between align-items-start">
+    <div>
+      <strong>{{ cita.paciente.nombre_completo }}</strong>
+      <div class="small text-muted">{{ cita.paciente.identificacion }}</div>
+    </div>
+    <span class="badge badge-{{ cita.estado }}">{{ cita.get_estado_display }}</span>
+  </div>
+</div>
+<div class="row g-2 small">
+  <div class="col-6"><i class="bi bi-calendar me-1 text-primary"></i><strong>Fecha:</strong> {{ cita.fecha|date:"d/m/Y" }}</div>
+  <div class="col-6"><i class="bi bi-clock me-1 text-primary"></i><strong>Hora:</strong> {{ cita.hora|time:"H:i" }}</div>
+  {% if cita.servicio %}<div class="col-12"><i class="bi bi-stars me-1 text-primary"></i><strong>Servicio:</strong> {{ cita.servicio.nombre }}</div>{% endif %}
+  {% if cita.notas %}<div class="col-12"><i class="bi bi-chat-text me-1 text-primary"></i>{{ cita.notas }}</div>{% endif %}
+  {% if cita.reservado_web %}<div class="col-12"><span class="badge bg-info">Reservado desde la web</span> {{ cita.nombre_web }}</div>{% endif %}
+</div>
+<div class="modal-footer px-0 pb-0 mt-3">
+  <a href="/consultas/?action=nueva&paciente_id={{ cita.paciente.pk }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-clipboard2-plus me-1"></i>Nueva Consulta
+  </a>
+  <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+</div>

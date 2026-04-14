@@ -1,0 +1,130 @@
+{% extends "base/admin_base.html" %}
+{% block title %}Calendario{% endblock %}{% block n_cit %}active{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/citas/">Citas</a></li>
+<li class="breadcrumb-item active">Calendario</li>
+{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="fw-700 mb-0">Calendario de Citas</h5>
+  <button class="btn btn-primary btn-sm" onclick="App.modal('/citas/',{action:'add'})">
+    <i class="bi bi-calendar-plus me-1"></i>Nueva Cita
+  </button>
+</div>
+<div class="card">
+  <div class="card-body">
+    <div class="cal-header">
+      <button class="btn btn-sm btn-outline-secondary" onclick="cambiarMes(-1)"><i class="bi bi-chevron-left"></i></button>
+      <h5 class="mb-0 fw-700" id="calTitle"></h5>
+      <button class="btn btn-sm btn-outline-secondary" onclick="cambiarMes(1)"><i class="bi bi-chevron-right"></i></button>
+    </div>
+    <div class="cal-grid" id="calGrid">
+      <div class="cal-day-hdr">Lun</div><div class="cal-day-hdr">Mar</div>
+      <div class="cal-day-hdr">Mié</div><div class="cal-day-hdr">Jue</div>
+      <div class="cal-day-hdr">Vie</div><div class="cal-day-hdr">Sáb</div>
+      <div class="cal-day-hdr">Dom</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let curYear  = {{ year }};
+let curMonth = {{ month }};
+const today  = '{{ today }}';
+
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+               'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+async function renderCalendar(year, month) {
+  const r = await fetch(`/citas/?action=calendario_data&year=${year}&month=${month}`);
+  const d = await r.json();
+  const events = d.events || [];
+
+  // Build event map
+  const eventMap = {};
+  events.forEach(e => {
+    if (!eventMap[e.fecha]) eventMap[e.fecha] = [];
+    eventMap[e.fecha].push(e);
+  });
+
+  document.getElementById('calTitle').textContent = `${MESES[month-1]} ${year}`;
+
+  const grid = document.getElementById('calGrid');
+  // Keep headers (first 7 children)
+  while (grid.children.length > 7) grid.removeChild(grid.lastChild);
+
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay  = new Date(year, month, 0).getDate();
+  // Monday = 0, adjust: getDay() returns 0=Sun
+  let startDow = firstDay.getDay() - 1;
+  if (startDow < 0) startDow = 6;
+
+  // Empty cells before first day
+  for (let i = 0; i < startDow; i++) {
+    const el = document.createElement('div');
+    el.className = 'cal-day other-month';
+    grid.appendChild(el);
+  }
+
+  for (let day = 1; day <= lastDay; day++) {
+    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const el = document.createElement('div');
+    el.className = 'cal-day' + (dateStr === today ? ' today' : '');
+    el.innerHTML = `<div class="day-num">${day}</div>`;
+
+    const dayEvents = eventMap[dateStr] || [];
+    dayEvents.slice(0,3).forEach(ev => {
+      const ev_el = document.createElement('div');
+      ev_el.className = `cal-event ${ev.estado}`;
+      ev_el.textContent = `${ev.hora} ${ev.nombre}`;
+      ev_el.onclick = (e) => { e.stopPropagation(); App.modal('/citas/',{action:'detalle',id:ev.id}); };
+      el.appendChild(ev_el);
+    });
+    if (dayEvents.length > 3) {
+      const more = document.createElement('div');
+      more.className = 'small text-muted mt-1'; more.style.fontSize='.65rem';
+      more.textContent = `+${dayEvents.length-3} más`;
+      el.appendChild(more);
+    }
+
+    el.onclick = () => {
+      // Pre-fill date when clicking a day
+      App.modal('/citas/',{action:'add'}).then(() => {
+        const inp = document.querySelector('#mainModal [name="fecha"]');
+        if (inp) inp.value = dateStr;
+        cargarSlots(dateStr);
+      });
+    };
+    grid.appendChild(el);
+  }
+}
+
+function cambiarMes(delta) {
+  curMonth += delta;
+  if (curMonth > 12) { curMonth = 1; curYear++; }
+  if (curMonth < 1)  { curMonth = 12; curYear--; }
+  renderCalendar(curYear, curMonth);
+}
+
+async function cargarSlots(fecha) {
+  if (!fecha) return;
+  const fd = new FormData();
+  fd.append('action','slots_disponibles'); fd.append('fecha',fecha);
+  const r = await fetch('/citas/',{method:'POST',body:fd,headers:{'X-CSRFToken':App.csrf()}});
+  const d = await r.json();
+  const sel = document.querySelector('#mainModal [name="hora"]');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Seleccionar hora —</option>';
+  (d.slots||[]).forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.hora; opt.textContent = s.hora + (s.libre ? '' : ' (ocupado)');
+    opt.disabled = !s.libre;
+    sel.appendChild(opt);
+  });
+}
+
+renderCalendar(curYear, curMonth);
+</script>
+{% endblock %}

@@ -1,0 +1,114 @@
+/* ═══════════════════════════════════════════════
+   Symetricare — Main Styles
+═══════════════════════════════════════════════ */
+:root {
+  --primary:    #6366f1;
+  --primary-dk: #4f46e5;
+  --primary-lt: #e0e7ff;
+  --accent:     #a78bfa;
+  --sidebar-bg: #1e1b4b;
+  --sidebar-txt:#a5b4fc;
+  --sb-w: 258px;
+  --top-h: 58px;
+  --card-r: .75rem;
+  --shadow: 0 1px 4px rgba(0,0,0,.07);
+}
+* { font-family:'Plus Jakarta Sans',sans-serif; box-sizing:border-box }
+body { background:#f5f7ff; min-height:100vh }
+.fw-500{font-weight:500!important}.fw-600{font-weight:600!important}.fw-700{font-weight:700!important}
+
+/* Sidebar */
+.sidebar { position:fixed;top:0;left:0;bottom:0;width:var(--sb-w);background:var(--sidebar-bg);
+  z-index:1000;overflow-y:auto;display:flex;flex-direction:column;transition:.3s }
+.sb-brand { padding:1.1rem 1rem .8rem;border-bottom:1px solid rgba(255,255,255,.06) }
+.sb-brand .bn { font-size:1rem;font-weight:700;color:#fff }
+.sb-brand .bs { font-size:.65rem;color:var(--sidebar-txt) }
+.sb-section { padding:.65rem 1rem .12rem;font-size:.62rem;text-transform:uppercase;
+  letter-spacing:.08em;color:#4338ca;font-weight:700 }
+.sb-link { display:flex;align-items:center;gap:.55rem;padding:.45rem 1rem;
+  color:var(--sidebar-txt);border-radius:.4rem;margin:.04rem .45rem;
+  font-size:.82rem;font-weight:500;transition:.15s;text-decoration:none }
+.sb-link:hover { background:rgba(99,102,241,.15);color:#c7d2fe }
+.sb-link.active { background:var(--primary);color:#fff }
+.sb-link i { width:18px;text-align:center;font-size:.9rem }
+
+/* Topbar */
+.topbar { position:fixed;top:0;left:var(--sb-w);right:0;height:var(--top-h);background:#fff;
+  border-bottom:1px solid #e5e7eb;display:flex;align-items:center;
+  padding:0 1.5rem;z-index:999;gap:1rem }
+
+/* Content */
+.main-ct { margin-left:var(--sb-w);padding-top:var(--top-h) }
+.ct-body  { padding:1.5rem }
+
+/* Cards */
+.card { border:none;border-radius:var(--card-r);box-shadow:var(--shadow) }
+.card-header { background:transparent;border-bottom:1px solid #f3f4f6;
+  font-weight:600;font-size:.875rem;padding:.8rem 1.2rem }
+
+/* Stats */
+.stat-card { border-radius:var(--card-r);padding:1.2rem 1.5rem;position:relative;overflow:hidden }
+.stat-card .si { font-size:2.8rem;opacity:.12;position:absolute;right:1rem;bottom:.25rem }
+.stat-card .sv { font-size:1.65rem;font-weight:700;line-height:1 }
+.stat-card .sl { font-size:.72rem;opacity:.85;margin-top:.3rem }
+
+/* Tables */
+.table th { font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;
+  color:#6b7280;font-weight:600;border-bottom:2px solid #f3f4f6;
+  white-space:nowrap;background:#fafafa;padding:.55rem .75rem }
+.table td { padding:.55rem .75rem;vertical-align:middle;font-size:.84rem;border-color:#f3f4f6 }
+.table-hover tbody tr:hover { background:#f9fafb }
+
+/* Badges */
+.badge-pendiente  { background:#fef3c7;color:#92400e }
+.badge-confirmada { background:#dbeafe;color:#1d4ed8 }
+.badge-atendida   { background:#d1fae5;color:#065f46 }
+.badge-cancelada  { background:#fee2e2;color:#b91c1c }
+.badge-no_asistio { background:#f3f4f6;color:#6b7280 }
+
+/* Ficha médica */
+.ficha-section { background:#fff;border-radius:var(--card-r);padding:1.25rem;margin-bottom:1rem;
+  box-shadow:var(--shadow) }
+.ficha-section-title { font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;
+  font-weight:700;color:var(--primary);margin-bottom:.85rem;
+  display:flex;align-items:center;gap:.4rem }
+.tag-chip { display:inline-flex;align-items:center;gap:.3rem;background:var(--primary-lt);
+  color:var(--primary-dk);border-radius:99px;padding:.2rem .65rem;font-size:.75rem;font-weight:500 }
+.tag-chip .remove { cursor:pointer;opacity:.6;line-height:1 }
+.tag-chip .remove:hover { opacity:1 }
+
+/* Calendario de citas */
+.cal-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem }
+.cal-grid { display:grid;grid-template-columns:repeat(7,1fr);gap:4px }
+.cal-day-hdr { text-align:center;font-size:.7rem;font-weight:700;color:#9ca3af;padding:.3rem 0 }
+.cal-day { min-height:80px;background:#fff;border-radius:.5rem;padding:.35rem;
+  box-shadow:var(--shadow);cursor:pointer;transition:.15s }
+.cal-day:hover { background:var(--primary-lt) }
+.cal-day.today { border:2px solid var(--primary) }
+.cal-day.other-month { background:#f9fafb;opacity:.5 }
+.cal-day .day-num { font-size:.8rem;font-weight:600;color:#374151 }
+.cal-event { font-size:.65rem;background:var(--primary);color:#fff;
+  border-radius:.25rem;padding:.1rem .35rem;margin-top:.2rem;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
+.cal-event.confirmada { background:#10b981 }
+.cal-event.cancelada  { background:#ef4444 }
+
+/* Botón xs */
+.btn-xs { padding:.2rem .45rem;font-size:.72rem;border-radius:.3rem;line-height:1.4 }
+
+/* Loading */
+#globalLoader { position:fixed;inset:0;background:rgba(255,255,255,.85);
+  display:flex;align-items:center;justify-content:center;z-index:9999;display:none }
+
+/* Web pública */
+.web-hero { background:linear-gradient(135deg,#6366f1 0%,#a78bfa 100%);min-height:100vh;
+  display:flex;align-items:center }
+.web-card { background:#fff;border-radius:1rem;padding:2rem;box-shadow:0 4px 24px rgba(99,102,241,.15) }
+.web-nav  { background:rgba(255,255,255,.95);backdrop-filter:blur(10px);
+  box-shadow:0 1px 12px rgba(0,0,0,.08) }
+
+@media(max-width:768px) {
+  .sidebar { transform:translateX(-100%) }
+  .sidebar.open { transform:translateX(0) }
+  .topbar, .main-ct { left:0;margin-left:0 }
+}

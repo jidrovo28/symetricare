@@ -1,0 +1,167 @@
+{% extends "base/admin_base.html" %}
+{% block title %}Disponibilidad{% endblock %}{% block n_disp %}active{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="fw-700 mb-0">Configuración de Horarios</h5>
+</div>
+<div class="row g-3">
+  <div class="col-lg-7"><div class="card"><div class="card-header">Horarios de Atención</div>
+  <div class="card-body">
+    <form method="post" action="/citas/disponibilidad/" id="horarioForm" onsubmit="return false">{% csrf_token %}
+    <input type="hidden" name="action" value="add">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3"><label class="form-label small fw-600">Día</label>
+        <select name="dia_semana" class="form-select form-select-sm">
+          {% for v,l in dia_choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}
+        </select></div>
+      <div class="col-md-2"><label class="form-label small fw-600">Desde</label>
+        <input type="time" name="hora_inicio" class="form-control form-control-sm" value="08:00"></div>
+      <div class="col-md-2"><label class="form-label small fw-600">Hasta</label>
+        <input type="time" name="hora_fin" class="form-control form-control-sm" value="17:00"></div>
+      <div class="col-md-2"><label class="form-label small fw-600">Slot (min)</label>
+        <select name="duracion_min" class="form-select form-select-sm">
+          <option value="30">30 min</option><option value="45">45 min</option>
+          <option value="60" selected>60 min</option><option value="90">90 min</option>
+        </select></div>
+      <div class="col-md-3">
+        <button type="button" class="btn btn-primary btn-sm w-100"
+                onclick="App.submit(document.getElementById('horarioForm'),()=>location.reload())">
+          <i class="bi bi-plus-lg me-1"></i>Agregar
+        </button>
+      </div>
+    </div></form>
+    <div class="table-responsive mt-3">
+    <table class="table table-sm mb-0"><thead><tr>
+      <th>Día</th><th>Desde</th><th>Hasta</th><th>Slot</th><th>Estado</th><th></th>
+    </tr></thead><tbody>
+    {% for h in horarios %}<tr>
+      <td class="small fw-500">{{ h.get_dia_semana_display }}</td>
+      <td class="small">{{ h.hora_inicio|time:"H:i" }}</td>
+      <td class="small">{{ h.hora_fin|time:"H:i" }}</td>
+      <td class="small">{{ h.duracion_min }} min</td>
+      <td><form method="post" action="/citas/disponibilidad/" class="d-inline">{% csrf_token %}
+        <input type="hidden" name="action" value="toggle"><input type="hidden" name="id" value="{{ h.pk }}">
+        <button type="submit" class="btn btn-xs {% if h.activo %}btn-success{% else %}btn-secondary{% endif %}">
+          {% if h.activo %}Activo{% else %}Inactivo{% endif %}
+        </button></form></td>
+      <td><form method="post" action="/citas/disponibilidad/" class="d-inline">{% csrf_token %}
+        <button type="button" class="btn btn-xs btn-light border text-danger btn-delete" data-id="{{ h.pk }}"><i class="bi bi-trash"></i></button>
+      </form></td>
+    </tr>{% empty %}<tr><td colspan="6" class="text-muted text-center py-3">Sin horarios configurados</td></tr>{% endfor %}
+    </tbody></table></div>
+  </div></div></div>
+
+  <div class="col-lg-5"><div class="card"><div class="card-header">Fechas Bloqueadas</div>
+  <div class="card-body">
+    <form method="post" action="/citas/disponibilidad/" id="bloqueoForm" onsubmit="return false">{% csrf_token %}
+    <input type="hidden" name="action" value="bloqueo">
+    <div class="row g-2 align-items-end mb-3">
+      <div class="col-7"><label class="form-label small fw-600">Fecha</label>
+        <input type="date" name="fecha" class="form-control form-control-sm"></div>
+      <div class="col-5"><label class="form-label small fw-600">Motivo</label>
+        <input type="text" name="motivo" class="form-control form-control-sm" placeholder="Ej: Feriado"></div>
+      <div class="col-12">
+        <button type="button" class="btn btn-warning btn-sm w-100"
+                onclick="App.submit(document.getElementById('bloqueoForm'),()=>location.reload())">
+          <i class="bi bi-slash-circle me-1"></i>Bloquear fecha
+        </button>
+      </div>
+    </div></form>
+    {% for b in bloqueos %}
+    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+      <div><div class="small fw-500">{{ b.fecha|date:"d/m/Y" }}</div>
+           <div class="text-muted small">{{ b.motivo|default:"Sin motivo" }}</div></div>
+      <form method="post" action="/citas/disponibilidad/">{% csrf_token %}
+        <input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ b.pk }}">
+        <button type="submit" class="btn btn-xs btn-light border text-danger"><i class="bi bi-x-lg"></i></button>
+      </form>
+    </div>{% empty %}
+    <p class="small text-muted text-center py-3">Sin fechas bloqueadas</p>{% endfor %}
+  </div></div></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.btn-delete');
+  if (!btn) return;
+
+  const id = btn.dataset.id;
+
+  Swal.fire({
+    title: '¿Estás seguro?',
+    text: "No podrás revertir esto",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar'
+  }).then((result) => {
+    if (result.isConfirmed) {
+
+      fetch('', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: new URLSearchParams({
+          action: 'delete',
+          id: id
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.result) {
+
+          // eliminar fila con animación
+          const row = btn.closest('tr');
+          if (row) {
+            row.style.transition = "0.3s";
+            row.style.opacity = "0";
+            setTimeout(() => row.remove(), 300);
+          }
+
+          Swal.fire(
+            'Eliminado',
+            'El registro fue eliminado correctamente',
+            'success'
+          );
+
+        } else {
+          Swal.fire(
+            'Error',
+            data.msg || 'No se pudo eliminar',
+            'error'
+          );
+        }
+      })
+      .catch(() => {
+        Swal.fire(
+          'Error',
+          'Error en la petición',
+          'error'
+        );
+      });
+
+    }
+  });
+});
+
+// CSRF Django
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+      cookie = cookie.trim();
+      if (cookie.startsWith(name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+</script>
+{% endblock %}

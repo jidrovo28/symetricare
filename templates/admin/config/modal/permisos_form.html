@@ -1,0 +1,26 @@
+<form id="modalForm" action="/config/usuarios/" onsubmit="return false">{% csrf_token %}
+<input type="hidden" name="action" value="modulos">
+<input type="hidden" name="id" value="{{ u.pk }}">
+<div class="mb-3">
+  <strong>{{ u.nombre_completo }}</strong>
+  <span class="badge bg-primary bg-opacity-10 text-primary ms-2">{{ u.get_rol_display }}</span>
+</div>
+{% if u.es_admin %}
+<div class="alert alert-info small py-2">Los administradores tienen acceso a todos los módulos automáticamente.</div>
+{% else %}
+<div class="d-flex flex-column gap-2">
+  {% for v,l in modulos %}
+  <div class="d-flex justify-content-between align-items-center p-2 rounded" style="background:#f9fafb">
+    <label class="small fw-500 mb-0" for="pm_{{ v }}">{{ l }}</label>
+    <input class="form-check-input" type="checkbox" name="modulos" value="{{ v }}" id="pm_{{ v }}"
+           {% if v in u.modulos_permitidos %}checked{% endif %}>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+<div class="modal-footer px-0 pb-0 mt-3">
+  <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+  <button type="button" class="btn btn-primary btn-sm" onclick="App.submit(document.getElementById('modalForm'),d=>{App.toast(d.msg);bootstrap.Modal.getInstance(document.getElementById('mainModal'))?.hide();location.reload();})">
+    <i class="bi bi-save me-1"></i>Guardar Permisos
+  </button>
+</div></form>

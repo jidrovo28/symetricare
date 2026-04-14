@@ -1,0 +1,31 @@
+{% extends "base/admin_base.html" %}
+{% block title %}Movimientos{% endblock %}{% block n_mov %}active{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="fw-700 mb-0">Movimientos Financieros</h5>
+  <div class="fw-600 text-success">Total abonos: ${{ total_abonos|floatformat:2 }}</div>
+</div>
+<div class="card mb-3"><div class="card-body py-2">
+  <form method="get" class="d-flex gap-2 align-items-end flex-wrap">
+    <div><label class="form-label small fw-600 mb-1">Desde</label>
+      <input type="date" name="desde" value="{{ desde }}" class="form-control form-control-sm"></div>
+    <div><label class="form-label small fw-600 mb-1">Hasta</label>
+      <input type="date" name="hasta" value="{{ hasta }}" class="form-control form-control-sm"></div>
+    <button type="submit" class="btn btn-outline-secondary btn-sm align-self-end"><i class="bi bi-search"></i></button>
+    <a href="/finanzas/movimientos/" class="btn btn-outline-secondary btn-sm align-self-end"><i class="bi bi-x"></i></a>
+  </form>
+</div></div>
+<div class="card"><div class="card-body p-0"><div class="table-responsive">
+<table class="table table-hover mb-0"><thead><tr>
+  <th>Fecha</th><th>Paciente</th><th>Tipo</th><th>Descripción</th><th>F. Pago</th><th class="text-end">Monto</th>
+</tr></thead><tbody>
+{% for m in listado %}<tr>
+  <td class="small text-muted">{{ m.fecha_creacion|date:"d/m/Y H:i" }}</td>
+  <td class="small fw-500">{{ m.paciente.nombre_completo|truncatechars:25 }}</td>
+  <td><span class="badge {% if m.tipo == 'abono' %}bg-success{% else %}bg-primary{% endif %} bg-opacity-10">{{ m.get_tipo_display }}</span></td>
+  <td class="small">{{ m.descripcion }}</td>
+  <td class="small">{{ m.forma_pago }}</td>
+  <td class="text-end fw-600">${{ m.monto|floatformat:2 }}</td>
+</tr>{% empty %}<tr><td colspan="6" class="text-center text-muted py-5">Sin movimientos</td></tr>{% endfor %}
+</tbody></table></div></div></div>
+{% include "base/paginacion.html" %}{% endblock %}
