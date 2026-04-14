@@ -187,19 +187,18 @@ def view_ficha(request, pk):
     data = {}
     adduserdata(request, data)
     pac = get_object_or_404(Paciente, pk=pk, status=True)
+    # Consultas con todos sus antecedentes prefetcheados en una sola query
+    consultas = pac.consultas.filter(status=True).prefetch_related(
+        'tratamientos__servicio',
+        'apf', 'app', 'alergias', 'medicamentos',
+        'suplementos', 'habitos', 'actividades_fisicas',
+        'tratamientos_realizados',
+    ).order_by('-fecha_creacion')[:20]
     data.update({
         'title':    f'Ficha — {pac.nombre_completo}',
         'pac':      pac,
-        'apf':      pac.apf.filter(status=True),
-        'app':      pac.app.filter(status=True),
-        'alergias': pac.alergias.filter(status=True),
-        'medicamentos': pac.medicamentos.filter(status=True),
-        'suplementos':  pac.suplementos.filter(status=True),
-        'habitos':      pac.habitos.filter(status=True),
-        'actividades':  pac.actividades_fisicas.filter(status=True),
-        'tratamientos_realizados': pac.tratamientos_realizados.filter(status=True),
-        'consultas':    pac.consultas.filter(status=True).order_by('-fecha_creacion')[:10],
-        'citas':        pac.citas.filter(status=True).order_by('-fecha')[:5],
+        'consultas': consultas,
+        'citas':    pac.citas.filter(status=True).order_by('-fecha')[:5],
     })
     try:
         data['cuenta'] = pac.cuenta

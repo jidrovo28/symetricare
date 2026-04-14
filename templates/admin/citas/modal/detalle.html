@@ -15,7 +15,7 @@
   {% if cita.reservado_web %}<div class="col-12"><span class="badge bg-info">Reservado desde la web</span> {{ cita.nombre_web }}</div>{% endif %}
 </div>
 <div class="modal-footer px-0 pb-0 mt-3">
-  <a href="/consultas/?action=nueva&paciente_id={{ cita.paciente.pk }}" class="btn btn-primary btn-sm">
+  <a href="/consultas/?action=nueva&paciente_id={{ cita.paciente.pk }}&cita_id={{ cita.id }}" class="btn btn-primary btn-sm">
     <i class="bi bi-clipboard2-plus me-1"></i>Nueva Consulta
   </a>
   <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>

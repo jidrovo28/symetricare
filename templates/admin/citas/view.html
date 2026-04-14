@@ -42,7 +42,7 @@
   <td class="small text-muted">{{ c.notas|truncatechars:35|default:"—" }}</td>
   <td><div class="d-flex gap-1">
     <button class="btn btn-xs btn-light border" onclick="App.modal('/citas/',{action:'detalle',id:{{ c.pk }}})" title="Ver"><i class="bi bi-eye"></i></button>
-    <a href="/consultas/?action=nueva&paciente_id={{ c.paciente.pk }}" class="btn btn-xs btn-primary" title="Nueva consulta"><i class="bi bi-clipboard2-plus"></i></a>
+    <a href="/consultas/?action=nueva&paciente_id={{ c.paciente.pk }}&cita_id={{ c.id }}" class="btn btn-xs btn-primary" title="Nueva consulta"><i class="bi bi-clipboard2-plus"></i></a>
     <button class="btn btn-xs btn-light border text-danger" onclick="App.delete('/citas/',{{ c.pk }},undefined,()=>location.reload())" title="Eliminar"><i class="bi bi-trash"></i></button>
   </div></td>
 </tr>{% empty %}<tr><td colspan="7" class="text-center text-muted py-5">Sin citas próximas</td></tr>{% endfor %}

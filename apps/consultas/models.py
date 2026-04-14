@@ -9,10 +9,9 @@ class Consulta(ModeloBase):
     CANCELADA  = 'cancelada'
     ESTADO_CHOICES = [(PENDIENTE,'Pendiente'),(ATENDIDA,'Atendida'),(CANCELADA,'Cancelada')]
 
-    paciente          = models.ForeignKey('pacientes.Paciente', on_delete=models.PROTECT,
-                         related_name='consultas')
-    profesional       = models.ForeignKey('core.Usuario', on_delete=models.SET_NULL,
-                         null=True, blank=True, related_name='consultas')
+    paciente          = models.ForeignKey('pacientes.Paciente', on_delete=models.PROTECT, related_name='consultas')
+    profesional       = models.ForeignKey('core.Usuario', on_delete=models.SET_NULL, null=True, blank=True, related_name='consultas')
+    cita = models.ForeignKey('citas.Cita', on_delete=models.PROTECT, related_name='cita', null=True, blank=True)
     estado            = models.CharField(max_length=15, choices=ESTADO_CHOICES, default=PENDIENTE)
     num_hijos         = models.IntegerField(default=0)
     motivo_consulta   = models.TextField()

@@ -61,6 +61,10 @@
       <div style="font-size:.72rem;color:#9ca3af"><i class="bi bi-clock me-1"></i>{{ c.hora|time:"H:i" }} — {{ c.servicio|default:"Consulta" }}</div>
     </div>
     <span class="badge badge-{{ c.estado }}">{{ c.get_estado_display }}</span>
+  <a href="/consultas/?action=nueva&paciente_id={{ c.paciente.pk }}&cita_id={{ c.id }}"
+   class="btn btn-light border text-primary btn-sm rounded-pill px-3">
+  Atender
+</a>
   </div>{% empty %}<div class="text-center text-muted py-4 small">Sin citas próximas</div>{% endfor %}
   </div></div></div>
 </div>{% endblock %}

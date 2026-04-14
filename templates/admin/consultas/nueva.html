@@ -1,5 +1,4 @@
 {% extends "base/admin_base.html" %}
-{% load static %}
 {% block title %}Nueva Consulta{% endblock %}{% block n_con %}active{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="/consultas/">Consultas</a></li>
@@ -9,16 +8,16 @@
 {% block content %}
 <form id="consultaForm" method="post" action="/consultas/" onsubmit="return false">
 {% csrf_token %}
-<input type="hidden" name="action" value="add">
+<input type="hidden" name="action"   value="add">
 <input type="hidden" name="subtotal" id="subtotalHidden" value="0">
 <input type="hidden" name="total"    id="totalHidden"    value="0">
 
 <div class="row g-3">
 
-<!-- COLUMNA IZQUIERDA: Paciente + datos clínicos -->
+<!-- ══════════════ COLUMNA IZQUIERDA ══════════════ -->
 <div class="col-lg-7 d-flex flex-column gap-3">
 
-  <!-- Buscador de paciente -->
+  <!-- Buscador paciente -->
   <div class="card">
     <div class="card-header" style="background:var(--primary-lt);color:var(--primary-dk)">
       <i class="bi bi-person-search me-2"></i>Paciente
@@ -26,19 +25,21 @@
     <div class="card-body">
       {% if pac %}
         <input type="hidden" name="paciente_id" id="pacienteId" value="{{ pac.pk }}">
+          <input type="hidden" name="cita_id" id="citaId" value="{{ cita_id }}">
         <div class="d-flex align-items-center gap-3">
           <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
                style="width:44px;height:44px;background:var(--primary-lt)">
             <i class="bi bi-person-fill" style="color:var(--primary);font-size:1.2rem"></i>
           </div>
-          <div>
+          <div class="flex-grow-1">
             <div class="fw-600">{{ pac.nombre_completo }}</div>
             <div class="small text-muted">{{ pac.identificacion }} | {{ pac.telefono|default:"Sin teléfono" }}</div>
           </div>
-          <a href="/consultas/?action=nueva" class="btn btn-xs btn-outline-secondary ms-auto">Cambiar</a>
+          <a href="/consultas/?action=nueva&cita_id={{ cita_id }}"  class="btn btn-xs btn-outline-secondary">Cambiar</a>
         </div>
       {% else %}
         <input type="hidden" name="paciente_id" id="pacienteId" value="">
+          <input type="hidden" name="cita_id" id="citaId" value="0">
         <div class="input-group mb-2">
           <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
           <input type="text" id="buscarPaciente" class="form-control border-start-0"
@@ -47,8 +48,8 @@
         <div id="pacienteInfo" class="d-none alert alert-primary py-2 small"></div>
         <div id="buscarResultados" class="list-group mt-1"></div>
         <div id="noPaciente" class="d-none">
-          <div class="alert alert-warning small py-2 mb-2">
-            <i class="bi bi-person-x me-1"></i>Paciente no encontrado.
+          <div class="alert alert-warning small py-2 mb-0">
+            <i class="bi bi-person-x me-1"></i>No encontrado.
             <a href="#" class="alert-link" onclick="event.preventDefault();App.modal('/pacientes/',{action:'add'})">Registrar nuevo</a>
           </div>
         </div>
@@ -56,34 +57,154 @@
     </div>
   </div>
 
-  <!-- Datos de la consulta -->
-  <div class="card flex-grow-1">
+  <!-- Datos clínicos -->
+  <div class="card">
     <div class="card-header" style="background:var(--primary-lt);color:var(--primary-dk)">
       <i class="bi bi-clipboard2-pulse me-2"></i>Datos Clínicos
     </div>
     <div class="card-body d-flex flex-column gap-2">
-      <div>
-        <label class="form-label small fw-600">N° de Hijos</label>
-        <input type="number" name="num_hijos" class="form-control form-control-sm" value="{{ pac.num_hijos|default:0 }}" min="0" style="max-width:100px">
+      <div class="row g-2">
+        <div class="col-md-3">
+          <label class="form-label small fw-600">N° de Hijos</label>
+          <input type="number" name="num_hijos" class="form-control form-control-sm"
+                 value="{{ pac.num_hijos|default:0 }}" min="0">
+        </div>
       </div>
       <div>
-        <label class="form-label small fw-600">Motivo de Consulta *</label>
-        <textarea name="motivo_consulta" class="form-control form-control-sm" rows="2" required placeholder="Describa el motivo..."></textarea>
+        <label class="form-label small fw-600">Motivo de Consulta <span class="text-danger">*</span></label>
+        <textarea name="motivo_consulta" class="form-control form-control-sm" rows="2" required
+                  placeholder="Describa el motivo de la consulta..."></textarea>
       </div>
       <div>
         <label class="form-label small fw-600">Observaciones</label>
-        <textarea name="observaciones" class="form-control form-control-sm" rows="2" placeholder="Observaciones adicionales..."></textarea>
+        <textarea name="observaciones" class="form-control form-control-sm" rows="2"
+                  placeholder="Observaciones adicionales..."></textarea>
       </div>
       <div>
         <label class="form-label small fw-600">Diagnóstico</label>
-        <textarea name="diagnostico" class="form-control form-control-sm" rows="2" placeholder="Diagnóstico..."></textarea>
+        <textarea name="diagnostico" class="form-control form-control-sm" rows="2"
+                  placeholder="Diagnóstico..."></textarea>
       </div>
     </div>
   </div>
 
+  <!-- ══ ANTECEDENTES (por esta consulta) ══ -->
+  <div class="card">
+    <div class="card-header" style="background:var(--primary-lt);color:var(--primary-dk)">
+      <i class="bi bi-journal-medical me-2"></i>Antecedentes de esta Consulta
+      <small class="ms-2 opacity-75">(se guardan junto a la consulta)</small>
+    </div>
+    <div class="card-body d-flex flex-column gap-3">
+
+      <!-- APF -->
+      <div>
+        <div class="small fw-700 mb-1" style="color:var(--primary)">
+          <i class="bi bi-people-fill me-1"></i>Antecedentes Patológicos Familiares (APF)
+        </div>
+        <div id="apfChips" class="d-flex flex-wrap gap-1 mb-1"></div>
+        <div class="d-flex gap-1">
+          <input type="text" id="apfInput" class="form-control form-control-sm"
+                 placeholder="Descripción..." onkeypress="if(event.key==='Enter'){event.preventDefault();addChip('apf');}">
+          <button type="button" class="btn btn-xs btn-primary" onclick="addChip('apf')"><i class="bi bi-plus"></i></button>
+        </div>
+      </div>
+
+      <!-- APP -->
+      <div>
+        <div class="small fw-700 mb-1" style="color:var(--primary)">
+          <i class="bi bi-person-fill me-1"></i>Antecedentes Patológicos Personales (APP)
+        </div>
+        <div id="appChips" class="d-flex flex-wrap gap-1 mb-1"></div>
+        <div class="row g-1">
+          <div class="col-8"><input type="text" id="appInput" class="form-control form-control-sm" placeholder="Descripción..."></div>
+          <div class="col-3"><input type="date" id="appFecha" class="form-control form-control-sm" title="Fecha diagnóstico"></div>
+          <div class="col-1"><button type="button" class="btn btn-xs btn-primary w-100" onclick="addChip('app')"><i class="bi bi-plus"></i></button></div>
+        </div>
+      </div>
+
+      <!-- Alergias -->
+      <div>
+        <div class="small fw-700 mb-1" style="color:#ef4444">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>Alergias
+        </div>
+        <div id="alergiasChips" class="d-flex flex-wrap gap-1 mb-1"></div>
+        <div class="d-flex gap-1">
+          <input type="text" id="alergiasInput" class="form-control form-control-sm"
+                 placeholder="Alergia..." onkeypress="if(event.key==='Enter'){event.preventDefault();addChip('alergias');}">
+          <button type="button" class="btn btn-xs btn-primary" onclick="addChip('alergias')"><i class="bi bi-plus"></i></button>
+        </div>
+      </div>
+
+      <!-- Medicamentos -->
+      <div>
+        <div class="small fw-700 mb-1" style="color:#6366f1">
+          <i class="bi bi-capsule me-1"></i>Medicamentos actuales
+        </div>
+        <div id="medicamentosChips" class="d-flex flex-wrap gap-1 mb-1"></div>
+        <div class="d-flex gap-1">
+          <input type="text" id="medicamentosInput" class="form-control form-control-sm"
+                 placeholder="Medicamento..." onkeypress="if(event.key==='Enter'){event.preventDefault();addChip('medicamentos');}">
+          <button type="button" class="btn btn-xs btn-primary" onclick="addChip('medicamentos')"><i class="bi bi-plus"></i></button>
+        </div>
+      </div>
+
+      <!-- Suplementos -->
+      <div>
+        <div class="small fw-700 mb-1" style="color:#10b981">
+          <i class="bi bi-droplet-fill me-1"></i>Suplementos
+        </div>
+        <div id="suplementosChips" class="d-flex flex-wrap gap-1 mb-1"></div>
+        <div class="d-flex gap-1">
+          <input type="text" id="suplementosInput" class="form-control form-control-sm"
+                 placeholder="Suplemento..." onkeypress="if(event.key==='Enter'){event.preventDefault();addChip('suplementos');}">
+          <button type="button" class="btn btn-xs btn-primary" onclick="addChip('suplementos')"><i class="bi bi-plus"></i></button>
+        </div>
+      </div>
+
+      <!-- Hábitos -->
+      <div>
+        <div class="small fw-700 mb-1" style="color:#8b5cf6">
+          <i class="bi bi-arrow-repeat me-1"></i>Hábitos
+        </div>
+        <div id="habitosChips" class="d-flex flex-wrap gap-1 mb-1"></div>
+        <div class="d-flex gap-1">
+          <input type="text" id="habitosInput" class="form-control form-control-sm"
+                 placeholder="Hábito..." onkeypress="if(event.key==='Enter'){event.preventDefault();addChip('habitos');}">
+          <button type="button" class="btn btn-xs btn-primary" onclick="addChip('habitos')"><i class="bi bi-plus"></i></button>
+        </div>
+      </div>
+
+      <!-- Actividad física -->
+      <div>
+        <div class="small fw-700 mb-1" style="color:#f59e0b">
+          <i class="bi bi-lightning-fill me-1"></i>Actividad Física
+        </div>
+        <div id="actividadesChips" class="d-flex flex-wrap gap-1 mb-1"></div>
+        <div class="d-flex gap-1">
+          <input type="text" id="actividadesInput" class="form-control form-control-sm"
+                 placeholder="Actividad..." onkeypress="if(event.key==='Enter'){event.preventDefault();addChip('actividades');}">
+          <button type="button" class="btn btn-xs btn-primary" onclick="addChip('actividades')"><i class="bi bi-plus"></i></button>
+        </div>
+      </div>
+
+      <!-- Tratamientos realizados -->
+      <div>
+        <div class="small fw-700 mb-1" style="color:#059669">
+          <i class="bi bi-check2-circle me-1"></i>Tratamientos Realizados anteriormente
+        </div>
+        <div id="tratRealizadosChips" class="d-flex flex-wrap gap-1 mb-1"></div>
+        <div class="row g-1">
+          <div class="col-8"><input type="text" id="tratRealizadosInput" class="form-control form-control-sm" placeholder="Descripción..."></div>
+          <div class="col-3"><input type="date" id="tratRealizadosFecha" class="form-control form-control-sm"></div>
+          <div class="col-1"><button type="button" class="btn btn-xs btn-primary w-100" onclick="addChip('tratRealizados')"><i class="bi bi-plus"></i></button></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
 </div>
 
-<!-- COLUMNA DERECHA: Tratamientos + cobro -->
+<!-- ══════════════ COLUMNA DERECHA ══════════════ -->
 <div class="col-lg-5 d-flex flex-column gap-3">
 
   <!-- Búsqueda de servicios -->
@@ -94,17 +215,16 @@
     <div class="card-body">
       <input type="text" id="buscarServicio" class="form-control form-control-sm mb-2"
              placeholder="Buscar servicio..." oninput="filtrarServicios(this.value)">
-      <!-- Por tipo -->
       {% for tipo in tipos_servicio %}
       <div class="mb-2">
-        <div class="small fw-600 text-muted mb-1" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">
-          <span class="badge me-1" style="background:{{ tipo.color }}">{{ tipo.nombre }}</span>
+        <div class="small text-muted mb-1" style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;font-weight:700">
+          <span class="badge" style="background:{{ tipo.color }}">{{ tipo.nombre }}</span>
         </div>
         <div class="d-flex flex-wrap gap-1">
           {% for srv in servicios %}{% if srv.tipo == tipo %}
           <button type="button" class="btn btn-sm servicio-btn"
                   style="background:var(--primary-lt);color:var(--primary-dk);border:none;font-size:.75rem"
-                  data-nombre="{{ srv.nombre }}" data-precio="{{ srv.precio }}"
+                  data-nombre="{{ srv.nombre }}"
                   onclick="Ficha.agregarTratamiento({{ srv.pk }},'{{ srv.nombre|escapejs }}',{{ srv.precio }})">
             {{ srv.nombre }}<span class="ms-1 opacity-75">${{ srv.precio }}</span>
           </button>
@@ -112,29 +232,28 @@
         </div>
       </div>
       {% endfor %}
-      <!-- Sin tipo -->
-      {% with sin_tipo=servicios|dictsort:"nombre" %}
       <div class="d-flex flex-wrap gap-1">
         {% for srv in servicios %}{% if not srv.tipo %}
         <button type="button" class="btn btn-sm servicio-btn"
                 style="background:#f3f4f6;color:#374151;border:none;font-size:.75rem"
+                data-nombre="{{ srv.nombre }}"
                 onclick="Ficha.agregarTratamiento({{ srv.pk }},'{{ srv.nombre|escapejs }}',{{ srv.precio }})">
           {{ srv.nombre }}<span class="ms-1 opacity-75">${{ srv.precio }}</span>
         </button>
         {% endif %}{% endfor %}
       </div>
-      {% endwith %}
     </div>
   </div>
 
   <!-- Items seleccionados -->
-  <div class="card flex-grow-1">
+  <div class="card">
     <div class="card-header d-flex justify-content-between" style="background:var(--primary-lt);color:var(--primary-dk)">
-      <span><i class="bi bi-list-check me-2"></i>Tratamientos seleccionados</span>
+      <span><i class="bi bi-list-check me-2"></i>Seleccionados</span>
       <span class="badge bg-primary" id="tratCount">0</span>
     </div>
-    <div class="card-body p-2" id="tratamientosContainer" style="min-height:80px;max-height:240px;overflow-y:auto">
-      <p class="text-muted small text-center py-3" id="emptyTrat">Selecciona servicios del panel superior</p>
+    <div class="card-body p-2" id="tratamientosContainer"
+         style="min-height:70px;max-height:200px;overflow-y:auto">
+      <p class="text-muted small text-center py-2 mb-0" id="emptyTrat">Selecciona servicios arriba</p>
     </div>
   </div>
 
@@ -147,12 +266,14 @@
       </div>
       <div class="d-flex justify-content-between align-items-center mb-2">
         <label class="small text-muted">Descuento ($)</label>
-        <input type="number" name="descuento" id="descuento" class="form-control form-control-sm text-end"
-               style="max-width:100px" value="0" min="0" step="0.01" oninput="Ficha.calcular()">
+        <input type="number" name="descuento" id="descuento"
+               class="form-control form-control-sm text-end"
+               style="max-width:100px" value="0" min="0" step="0.01"
+               oninput="Ficha.calcular()">
       </div>
-      <div class="d-flex justify-content-between mb-1 pt-1 border-top">
-        <span class="fw-600">TOTAL</span>
-        <span class="fw-700 fs-6" style="color:var(--primary)" id="totalDisplay">$0.00</span>
+      <div class="d-flex justify-content-between mb-1 pt-1 border-top fw-600">
+        <span>TOTAL</span>
+        <span class="fs-6" style="color:var(--primary)" id="totalDisplay">$0.00</span>
       </div>
       <hr class="my-2">
       <div class="mb-2">
@@ -177,7 +298,7 @@
           <i class="bi bi-receipt me-1"></i>Generar factura por el abono
         </label>
       </div>
-      <button type="button" class="btn btn-primary w-100 fw-600" id="btnGuardar" onclick="guardarConsulta()">
+      <button type="button" class="btn btn-primary w-100 fw-600" onclick="guardarConsulta()">
         <i class="bi bi-save me-2"></i>Guardar Consulta
       </button>
     </div>
@@ -187,10 +308,10 @@
 </div>
 </form>
 {% endblock %}
+
 {% block extra_js %}
-<script src="{% static 'js/main.js' %}"></script>
 <script>
-// Observar cambios en tratamientos para actualizar counter
+// ── Conteo de tratamientos ─────────────────────────────────────────────────
 const observer = new MutationObserver(() => {
   const n = document.querySelectorAll('#tratamientosContainer [data-srv]').length;
   document.getElementById('tratCount').textContent = n;
@@ -198,56 +319,98 @@ const observer = new MutationObserver(() => {
 });
 observer.observe(document.getElementById('tratamientosContainer'), {childList:true});
 
-// Búsqueda de paciente
+// ── Búsqueda de paciente ───────────────────────────────────────────────────
 {% if not pac %}
-const searchPac = App.debounce(async (q) => {
+const _searchPac = App.debounce(async (q) => {
   if (q.length < 2) { document.getElementById('buscarResultados').innerHTML=''; return; }
   const r = await fetch('/pacientes/?action=buscar&q=' + encodeURIComponent(q));
   const d = await r.json();
   const cont = document.getElementById('buscarResultados');
   cont.innerHTML = '';
   if (!d.data?.length) {
-    document.getElementById('noPaciente').classList.remove('d-none');
-    return;
+    document.getElementById('noPaciente').classList.remove('d-none'); return;
   }
   document.getElementById('noPaciente').classList.add('d-none');
   d.data.forEach(p => {
     const el = document.createElement('button');
     el.type = 'button';
     el.className = 'list-group-item list-group-item-action py-2';
-    el.innerHTML = `<div class="small fw-600">${p.nombre}</div><div class="text-muted" style="font-size:.72rem">${p.identificacion} | ${p.telefono||''}</div>`;
-    el.onclick = () => seleccionarPaciente(p);
+    el.innerHTML = `<div class="small fw-600">${p.nombre}</div>
+                    <div class="text-muted" style="font-size:.72rem">${p.identificacion} | ${p.telefono||''}</div>`;
+    el.onclick = () => {
+      document.getElementById('pacienteId').value = p.id;
+      document.getElementById('pacienteInfo').textContent = `✔ ${p.nombre} — ${p.identificacion}`;
+      document.getElementById('pacienteInfo').classList.remove('d-none');
+      document.getElementById('buscarResultados').innerHTML = '';
+      document.getElementById('noPaciente').classList.add('d-none');
+      document.getElementById('buscarPaciente').value = p.nombre;
+    };
     cont.appendChild(el);
   });
 }, 300);
-
-document.getElementById('buscarPaciente').addEventListener('input', e => searchPac(e.target.value));
-
-function seleccionarPaciente(p) {
-  document.getElementById('pacienteId').value = p.id;
-  document.getElementById('pacienteInfo').textContent = `✔ ${p.nombre} — ${p.identificacion}`;
-  document.getElementById('pacienteInfo').classList.remove('d-none');
-  document.getElementById('buscarResultados').innerHTML = '';
-  document.getElementById('noPaciente').classList.add('d-none');
-  document.getElementById('buscarPaciente').value = p.nombre;
-}
+document.getElementById('buscarPaciente').addEventListener('input', e => _searchPac(e.target.value));
 {% endif %}
 
-// Filtrar servicios por texto
+// ── Filtrar servicios ─────────────────────────────────────────────────────
 function filtrarServicios(q) {
   document.querySelectorAll('.servicio-btn').forEach(btn => {
-    const nombre = btn.dataset.nombre?.toLowerCase() || btn.textContent.toLowerCase();
-    btn.style.display = nombre.includes(q.toLowerCase()) ? '' : 'none';
+    btn.style.display = btn.dataset.nombre?.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
   });
 }
 
-// Guardar consulta
+// ── Chips de antecedentes ─────────────────────────────────────────────────
+// Cada chip agrega un input hidden con el name correspondiente
+const chipConfig = {
+  apf:           { inputId:'apfInput',           chipId:'apfChips',           hiddenName:'apf[]',           fechaId:null },
+  app:           { inputId:'appInput',           chipId:'appChips',           hiddenName:'app_desc[]',      fechaId:'appFecha', fechaName:'app_fecha[]' },
+  alergias:      { inputId:'alergiasInput',      chipId:'alergiasChips',      hiddenName:'alergias[]',      fechaId:null },
+  medicamentos:  { inputId:'medicamentosInput',  chipId:'medicamentosChips',  hiddenName:'medicamentos[]',  fechaId:null },
+  suplementos:   { inputId:'suplementosInput',   chipId:'suplementosChips',   hiddenName:'suplementos[]',   fechaId:null },
+  habitos:       { inputId:'habitosInput',       chipId:'habitosChips',       hiddenName:'habitos[]',       fechaId:null },
+  actividades:   { inputId:'actividadesInput',   chipId:'actividadesChips',   hiddenName:'actividades[]',   fechaId:null },
+  tratRealizados:{ inputId:'tratRealizadosInput',chipId:'tratRealizadosChips',hiddenName:'trat_realizado_desc[]', fechaId:'tratRealizadosFecha', fechaName:'trat_realizado_fecha[]' },
+};
+
+const chipColors = {
+  apf:'#e0e7ff:#4f46e5', app:'#e0e7ff:#4f46e5', alergias:'#fee2e2:#b91c1c',
+  medicamentos:'#ede9fe:#5b21b6', suplementos:'#d1fae5:#065f46', habitos:'#ede9fe:#5b21b6',
+  actividades:'#fef3c7:#92400e', tratRealizados:'#d1fae5:#065f46',
+};
+
+function addChip(tipo) {
+  const cfg  = chipConfig[tipo];
+  const inp  = document.getElementById(cfg.inputId);
+  const val  = inp.value.trim();
+  if (!val) return;
+
+  const cont  = document.getElementById(cfg.chipId);
+  const [bg, color] = (chipColors[tipo]||'#e0e7ff:#4f46e5').split(':');
+  const chip  = document.createElement('span');
+  chip.className = 'tag-chip me-1 mb-1';
+  chip.style.cssText = `background:${bg};color:${color}`;
+
+  // Texto visible
+  let label = val;
+  const fechaEl = cfg.fechaId ? document.getElementById(cfg.fechaId) : null;
+  if (fechaEl?.value) label += ` (${fechaEl.value})`;
+
+  chip.innerHTML = `${label}
+    <input type="hidden" name="${cfg.hiddenName}" value="${val}">
+    ${cfg.fechaName ? `<input type="hidden" name="${cfg.fechaName}" value="${fechaEl?.value||''}">` : ''}
+    <span class="remove ms-1" style="cursor:pointer" onclick="this.closest('.tag-chip').remove()">×</span>`;
+
+  cont.appendChild(chip);
+  inp.value = '';
+  if (fechaEl) fechaEl.value = '';
+  inp.focus();
+}
+
+// ── Guardar consulta ──────────────────────────────────────────────────────
 async function guardarConsulta() {
-  const pacId = document.getElementById('pacienteId').value;
-  if (!pacId) { App.toast('Selecciona un paciente','warning'); return; }
-  const tratos = document.querySelectorAll('#tratamientosContainer [data-srv]');
-  if (!tratos.length) { App.toast('Agrega al menos un tratamiento','warning'); return; }
+  const pacId  = document.getElementById('pacienteId').value;
+  const citaId = document.getElementById('citaId').value;
   const motivo = document.querySelector('[name="motivo_consulta"]').value.trim();
+  if (!pacId)  { App.toast('Selecciona un paciente','warning'); return; }
   if (!motivo) { App.toast('Ingresa el motivo de consulta','warning'); return; }
 
   App.loading(true);
@@ -259,8 +422,8 @@ async function guardarConsulta() {
     if (d.result) {
       App.toast(d.msg);
       setTimeout(() => {
-        window.location.href = pacId ? '/pacientes/' + pacId + '/ficha/' : '/consultas/';
-      }, 1800);
+        window.location.href = `/pacientes/${d.paciente_id}/ficha/`;
+      }, 1600);
     } else App.toast(d.msg,'danger');
   } catch(ex) { App.loading(false); App.toast(ex.message,'danger'); }
 }

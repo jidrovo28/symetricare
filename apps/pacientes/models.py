@@ -8,19 +8,19 @@ class Paciente(ModeloBase):
     TIPO_RUC       = 'ruc'
     TIPO_CHOICES   = [(TIPO_CEDULA,'Cédula'),(TIPO_PASAPORTE,'Pasaporte'),(TIPO_RUC,'RUC')]
 
-    tipo_identificacion = models.CharField(max_length=15, choices=TIPO_CHOICES, default=TIPO_CEDULA)
-    identificacion      = models.CharField(max_length=20, unique=True)
-    nombres             = models.CharField(max_length=150)
-    apellido1           = models.CharField(max_length=100)
-    apellido2           = models.CharField(max_length=100, blank=True)
-    telefono            = models.CharField(max_length=20, blank=True)
-    edad                = models.IntegerField(null=True, blank=True)
-    fecha_nacimiento    = models.DateField(null=True, blank=True)
-    direccion           = models.TextField(blank=True)
-    email               = models.EmailField(blank=True)
-    foto                = models.ImageField(upload_to='pacientes/', null=True, blank=True)
-    num_hijos           = models.IntegerField(default=0)
-    observaciones_generales = models.TextField(blank=True)
+    tipo_identificacion      = models.CharField(max_length=15, choices=TIPO_CHOICES, default=TIPO_CEDULA)
+    identificacion           = models.CharField(max_length=20, unique=True)
+    nombres                  = models.CharField(max_length=150)
+    apellido1                = models.CharField(max_length=100)
+    apellido2                = models.CharField(max_length=100, blank=True)
+    telefono                 = models.CharField(max_length=20, blank=True)
+    edad                     = models.IntegerField(null=True, blank=True)
+    fecha_nacimiento         = models.DateField(null=True, blank=True)
+    direccion                = models.TextField(blank=True)
+    email                    = models.EmailField(blank=True)
+    foto                     = models.ImageField(upload_to='pacientes/', null=True, blank=True)
+    num_hijos                = models.IntegerField(default=0)
+    observaciones_generales  = models.TextField(blank=True)
 
     class Meta:
         ordering = ['apellido1', 'nombres']
@@ -33,7 +33,6 @@ class Paciente(ModeloBase):
         return f"{self.apellido1} {self.apellido2} {self.nombres}".strip()
 
     def save(self, *args, **kwargs):
-        # Calcular edad desde fecha nacimiento
         if self.fecha_nacimiento and not self.edad:
             from datetime import date
             hoy = date.today()
@@ -42,54 +41,60 @@ class Paciente(ModeloBase):
         super().save(*args, **kwargs)
 
 
+# ── Modelos de antecedentes: vinculados a la CONSULTA ────────────────────────
+# Cada consulta registra su propio estado clínico del paciente en ese momento.
+
 class APF(ModeloBase):
-    """Antecedente Patológico Familiar"""
-    paciente    = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='apf')
+    """Antecedente Patológico Familiar — registrado por consulta"""
+    consulta    = models.ForeignKey('consultas.Consulta', on_delete=models.CASCADE, related_name='apf')
     descripcion = models.TextField()
+
     class Meta: ordering = ['-fecha_creacion']
     def __str__(self): return f"APF: {self.descripcion[:50]}"
 
 
 class APP(ModeloBase):
-    """Antecedente Patológico Personal"""
-    paciente          = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='app')
+    """Antecedente Patológico Personal — registrado por consulta"""
+    consulta          = models.ForeignKey('consultas.Consulta', on_delete=models.CASCADE, related_name='app')
     descripcion       = models.TextField()
     fecha_diagnostico = models.DateField(null=True, blank=True)
+
     class Meta: ordering = ['-fecha_creacion']
 
 
 class Alergia(ModeloBase):
-    paciente    = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='alergias')
+    consulta    = models.ForeignKey('consultas.Consulta', on_delete=models.CASCADE, related_name='alergias')
     descripcion = models.CharField(max_length=300)
     class Meta: ordering = ['-fecha_creacion']
 
 
 class Medicamento(ModeloBase):
-    paciente    = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='medicamentos')
+    consulta    = models.ForeignKey('consultas.Consulta', on_delete=models.CASCADE, related_name='medicamentos')
     descripcion = models.CharField(max_length=300)
     class Meta: ordering = ['-fecha_creacion']
 
 
 class Suplemento(ModeloBase):
-    paciente    = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='suplementos')
+    consulta    = models.ForeignKey('consultas.Consulta', on_delete=models.CASCADE, related_name='suplementos')
     descripcion = models.CharField(max_length=300)
     class Meta: ordering = ['-fecha_creacion']
 
 
 class Habito(ModeloBase):
-    paciente    = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='habitos')
+    consulta    = models.ForeignKey('consultas.Consulta', on_delete=models.CASCADE, related_name='habitos')
     descripcion = models.CharField(max_length=300)
     class Meta: ordering = ['-fecha_creacion']
 
 
 class ActividadFisica(ModeloBase):
-    paciente    = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='actividades_fisicas')
+    consulta    = models.ForeignKey('consultas.Consulta', on_delete=models.CASCADE, related_name='actividades_fisicas')
     descripcion = models.CharField(max_length=300)
     class Meta: ordering = ['-fecha_creacion']
 
 
 class TratamientoRealizado(ModeloBase):
-    paciente    = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='tratamientos_realizados')
+    """Tratamientos ya realizados al momento de la consulta"""
+    consulta    = models.ForeignKey('consultas.Consulta', on_delete=models.CASCADE, related_name='tratamientos_realizados')
     descripcion = models.TextField()
     fecha       = models.DateField(null=True, blank=True)
     class Meta: ordering = ['-fecha_creacion']

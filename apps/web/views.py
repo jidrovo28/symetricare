@@ -42,6 +42,22 @@ def reservar_cita(request):
             if cedula:
                 pac = Paciente.objects.filter(identificacion=cedula, status=True).first()
 
+            if not pac:
+                partes = nombre.split()
+                nombres = " ".join(partes[:-2])
+                apellido1 = partes[-2]
+                apellido2 = partes[-1]
+                pac = Paciente.objects.create(
+                    tipo_identificacion=request.POST.get('tipo_identificacion', 'cedula'),
+                    identificacion=cedula,
+                    nombres=nombres,
+                    apellido1=apellido1,
+                    apellido2=apellido2,
+                    telefono=telefono,
+                    email=email,
+                    direccion=request.POST.get('direccion', ''),
+                )
+
             cita = Cita.objects.create(
                 paciente      = pac,
                 fecha         = fecha,
@@ -60,12 +76,31 @@ def reservar_cita(request):
         except Exception as ex:
             return JsonResponse({'result': False, 'msg': str(ex)})
 
-    # GET: render form
-    from apps.citas.models import DisponibilidadHoraria
-    from apps.servicios.models import Servicio
-    return render(request, 'web/reservar.html', {
-        'servicios': Servicio.objects.filter(status=True, activo=True),
-    })
+    else:
+        if 'action' in request.GET:
+            action = request.GET['action']
+
+            if action == 'consulta_paciente':
+                try:
+                    from apps.pacientes.models import Paciente
+                    data = {}
+                    identificacion = request.GET['identificacion']
+                    paciente = Paciente.objects.filter(status=True, identificacion=identificacion).first()
+                    if not paciente:
+                        return JsonResponse({'result': True, 'data': data})
+                    data['nombres'] = nombres = f"{paciente.nombres} {paciente.apellido1} {paciente.apellido2}"
+                    data['telefono'] = telefono = paciente.telefono
+                    data['email'] = email = paciente.email
+                    return JsonResponse({'result': True, 'data': data})
+                except Exception as ex:
+                    return JsonResponse({'result': False, 'msg': str(ex)})
+        else:
+            # GET: render form
+            from apps.citas.models import DisponibilidadHoraria
+            from apps.servicios.models import Servicio
+            return render(request, 'web/reservar.html', {
+                'servicios': Servicio.objects.filter(status=True, activo=True),
+            })
 
 
 def slots_web(request):
