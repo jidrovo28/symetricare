@@ -201,7 +201,7 @@ def view_disponibilidad(request):
                 return JsonResponse({'result': False, 'msg': str(ex)})
 
     else:
-        data['title']        = 'Disponibilidad Horaria'
+        data['title'] = 'Disponibilidad Horaria'
         data['horarios']     = DisponibilidadHoraria.objects.filter(status=True).order_by('dia_semana','hora_inicio')
         data['bloqueos']     = BloqueoFecha.objects.filter(status=True, fecha__gte=date.today()).order_by('fecha')
         data['dia_choices']  = DisponibilidadHoraria.DIA_CHOICES
