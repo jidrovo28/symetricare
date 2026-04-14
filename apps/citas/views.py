@@ -125,7 +125,19 @@ def view_citas(request):
             filtro = Q(status=True, fecha__gte=hoy)
             estado = request.GET.get('estado','')
             if estado: filtro &= Q(estado=estado)
-            listado = Cita.objects.filter(filtro).select_related('paciente','servicio').order_by('fecha','hora')
+            from django.db.models import Case, When, Value, IntegerField
+
+            listado = Cita.objects.filter(filtro).select_related('paciente', 'servicio').annotate(
+                orden_estado=Case(
+                    When(estado='pendiente', then=Value(1)),
+                    When(estado='confirmada', then=Value(2)),
+                    When(estado='atendida', then=Value(3)),
+                    When(estado='cancelada', then=Value(4)),
+                    When(estado='no_asistio', then=Value(5)),
+                    default=Value(99),
+                    output_field=IntegerField()
+                )
+            ).order_by('orden_estado', 'fecha', 'hora')
             paging  = MiPaginador(listado, 30)
             p_num   = int(request.GET.get('page',1))
             try: page = paging.page(p_num)

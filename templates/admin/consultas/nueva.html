@@ -25,7 +25,7 @@
     <div class="card-body">
       {% if pac %}
         <input type="hidden" name="paciente_id" id="pacienteId" value="{{ pac.pk }}">
-          <input type="hidden" name="cita_id" id="citaId" value="{{ cita_id }}">
+        <input type="hidden" name="cita_id" id="citaId" value="{{ cita_id }}">
         <div class="d-flex align-items-center gap-3">
           <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
                style="width:44px;height:44px;background:var(--primary-lt)">
@@ -35,24 +35,96 @@
             <div class="fw-600">{{ pac.nombre_completo }}</div>
             <div class="small text-muted">{{ pac.identificacion }} | {{ pac.telefono|default:"Sin teléfono" }}</div>
           </div>
-          <a href="/consultas/?action=nueva&cita_id={{ cita_id }}"  class="btn btn-xs btn-outline-secondary">Cambiar</a>
+          <a href="/consultas/?action=nueva&cita_id={{ cita_id }}" class="btn btn-xs btn-outline-secondary">Cambiar</a>
         </div>
       {% else %}
         <input type="hidden" name="paciente_id" id="pacienteId" value="">
-          <input type="hidden" name="cita_id" id="citaId" value="0">
-        <div class="input-group mb-2">
-          <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-          <input type="text" id="buscarPaciente" class="form-control border-start-0"
-                 placeholder="Buscar por cédula, nombre..." autofocus>
-        </div>
-        <div id="pacienteInfo" class="d-none alert alert-primary py-2 small"></div>
-        <div id="buscarResultados" class="list-group mt-1"></div>
-        <div id="noPaciente" class="d-none">
-          <div class="alert alert-warning small py-2 mb-0">
-            <i class="bi bi-person-x me-1"></i>No encontrado.
-            <a href="#" class="alert-link" onclick="event.preventDefault();App.modal('/pacientes/',{action:'add'})">Registrar nuevo</a>
+        <input type="hidden" name="cita_id" id="citaId" value="0">
+        <!-- Búsqueda -->
+        <div id="seccionBuscar">
+          <div class="input-group mb-2">
+            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" id="buscarPaciente" class="form-control border-start-0"
+                   placeholder="Buscar por cédula, nombre..." autofocus>
+            <button type="button" class="btn btn-outline-primary"
+                    onclick="mostrarFormNuevo()" title="Registrar nuevo paciente">
+              <i class="bi bi-person-plus"></i>
+            </button>
+          </div>
+          <div id="pacienteInfo" class="d-none alert alert-success py-2 small d-flex align-items-center gap-2">
+            <i class="bi bi-check-circle-fill"></i><span id="pacienteInfoTxt"></span>
+            <button type="button" class="btn btn-xs btn-outline-secondary ms-auto" onclick="limpiarPaciente()">Cambiar</button>
+          </div>
+          <div id="buscarResultados" class="list-group mt-1" style="max-height:200px;overflow-y:auto"></div>
+          <div id="noPaciente" class="d-none">
+            <div class="alert alert-warning small py-2 mb-0 d-flex align-items-center gap-2">
+              <i class="bi bi-person-x"></i>
+              <span>No encontrado.</span>
+              <button type="button" class="btn btn-xs btn-warning ms-auto" onclick="mostrarFormNuevo()">
+                <i class="bi bi-person-plus me-1"></i>Registrar nuevo
+              </button>
+            </div>
           </div>
         </div>
+
+        <!-- Formulario nuevo paciente (oculto por defecto) -->
+        <div id="seccionNuevoPaciente" style="display:none">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <div class="fw-600 small" style="color:var(--primary)">
+              <i class="bi bi-person-plus me-1"></i>Registrar nuevo paciente
+            </div>
+            <button type="button" class="btn btn-xs btn-outline-secondary ms-auto" onclick="ocultarFormNuevo()">
+              <i class="bi bi-arrow-left me-1"></i>Volver a buscar
+            </button>
+          </div>
+          <div class="row g-2">
+            <div class="col-md-4">
+              <label class="form-label small fw-600">Tipo ID</label>
+              <select id="np_tipo" class="form-select form-select-sm">
+                <option value="cedula">Cédula</option>
+                <option value="pasaporte">Pasaporte</option>
+                <option value="ruc">RUC</option>
+              </select>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label small fw-600">Identificación <span class="text-danger">*</span></label>
+              <input type="text" id="np_cedula" class="form-control form-control-sm" placeholder="Cédula / RUC / Pasaporte">
+            </div>
+            <div class="col-md-5">
+              <label class="form-label small fw-600">Nombres <span class="text-danger">*</span></label>
+              <input type="text" id="np_nombres" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-600">Apellido 1 <span class="text-danger">*</span></label>
+              <input type="text" id="np_apellido1" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-600">Apellido 2</label>
+              <input type="text" id="np_apellido2" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-600">Teléfono</label>
+              <input type="text" id="np_telefono" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-600">Fecha nacimiento</label>
+              <input type="date" id="np_fecha_nac" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-600">Edad</label>
+              <input type="number" id="np_edad" class="form-control form-control-sm" min="0" max="120">
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-600">Dirección</label>
+              <input type="text" id="np_direccion" class="form-control form-control-sm">
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm w-100 mt-3" onclick="registrarYSeleccionar()">
+            <i class="bi bi-person-check me-1"></i>Registrar y seleccionar paciente
+          </button>
+          <div id="npError" class="alert alert-danger small py-2 mt-2 d-none"></div>
+        </div>
+
       {% endif %}
     </div>
   </div>
@@ -321,6 +393,73 @@ observer.observe(document.getElementById('tratamientosContainer'), {childList:tr
 
 // ── Búsqueda de paciente ───────────────────────────────────────────────────
 {% if not pac %}
+// ── Mostrar / ocultar formulario nuevo paciente ──────────────────────────
+function mostrarFormNuevo() {
+  document.getElementById('seccionBuscar').style.display = 'none';
+  document.getElementById('seccionNuevoPaciente').style.display = 'block';
+}
+function ocultarFormNuevo() {
+  document.getElementById('seccionNuevoPaciente').style.display = 'none';
+  document.getElementById('seccionBuscar').style.display = 'block';
+  document.getElementById('noPaciente').classList.add('d-none');
+}
+function limpiarPaciente() {
+  document.getElementById('pacienteId').value = '';
+  document.getElementById('pacienteInfo').classList.add('d-none');
+  document.getElementById('buscarPaciente').value = '';
+  document.getElementById('buscarResultados').innerHTML = '';
+}
+
+// ── Registrar nuevo paciente y seleccionarlo automáticamente ─────────────
+async function registrarYSeleccionar() {
+  const cedula   = document.getElementById('np_cedula').value.trim();
+  const nombres  = document.getElementById('np_nombres').value.trim();
+  const apellido1= document.getElementById('np_apellido1').value.trim();
+  const errEl    = document.getElementById('npError');
+
+  if (!cedula)    { errEl.textContent='La identificación es obligatoria'; errEl.classList.remove('d-none'); return; }
+  if (!nombres)   { errEl.textContent='El nombre es obligatorio'; errEl.classList.remove('d-none'); return; }
+  if (!apellido1) { errEl.textContent='El apellido es obligatorio'; errEl.classList.remove('d-none'); return; }
+  errEl.classList.add('d-none');
+
+  App.loading(true);
+  const fd = new FormData();
+  fd.append('action',               'add');
+  fd.append('tipo_identificacion',  document.getElementById('np_tipo').value);
+  fd.append('identificacion',       cedula);
+  fd.append('nombres',              nombres);
+  fd.append('apellido1',            apellido1);
+  fd.append('apellido2',            document.getElementById('np_apellido2').value.trim());
+  fd.append('telefono',             document.getElementById('np_telefono').value.trim());
+  fd.append('fecha_nacimiento',     document.getElementById('np_fecha_nac').value);
+  fd.append('edad',                 document.getElementById('np_edad').value);
+  fd.append('direccion',            document.getElementById('np_direccion').value.trim());
+
+  try {
+    const r = await fetch('/pacientes/', {method:'POST',body:fd,headers:{'X-CSRFToken':App.csrf()}});
+    const d = await r.json();
+    App.loading(false);
+
+    if (d.result) {
+      // Seleccionar automáticamente el nuevo paciente
+      document.getElementById('pacienteId').value = d.id;
+      const nombreCompleto = `${apellido1} ${document.getElementById('np_apellido2').value.trim()} ${nombres}`.trim();
+      document.getElementById('pacienteInfoTxt').textContent = `${nombreCompleto} — ${cedula}`;
+      document.getElementById('pacienteInfo').classList.remove('d-none');
+      // Volver a la vista de búsqueda (ya con paciente seleccionado)
+      ocultarFormNuevo();
+      App.toast('Paciente registrado y seleccionado', 'success');
+    } else {
+      errEl.textContent = d.msg;
+      errEl.classList.remove('d-none');
+    }
+  } catch(ex) {
+    App.loading(false);
+    errEl.textContent = ex.message;
+    errEl.classList.remove('d-none');
+  }
+}
+
 const _searchPac = App.debounce(async (q) => {
   if (q.length < 2) { document.getElementById('buscarResultados').innerHTML=''; return; }
   const r = await fetch('/pacientes/?action=buscar&q=' + encodeURIComponent(q));

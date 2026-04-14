@@ -171,9 +171,13 @@ def view_consultas(request):
 
         elif action == 'delete':
             try:
+                from apps.finanzas.models import CuentaPaciente
                 obj = get_object_or_404(Consulta, pk=request.POST.get('id'))
                 obj.status = False
                 obj.save(update_fields=['status'])
+                cuenta_ = CuentaPaciente.objects.filter(status=True, paciente=obj.paciente).first()
+                if cuenta_:
+                    cuenta_.recalcular()
                 return JsonResponse({'result': True})
             except Exception as ex:
                 return JsonResponse({'result': False, 'msg': str(ex)})
