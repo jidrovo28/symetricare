@@ -14,13 +14,30 @@ class CuentaPaciente(ModeloBase):
         ordering = ['-fecha_creacion']
 
     def recalcular(self):
-        from apps.consultas.models import Consulta
-        qs = Consulta.objects.filter(status=True, paciente=self.paciente)
+        """
+        Calcula los totales directamente desde las fuentes:
+        - total_cobrado → suma de VisitaTratamiento (lo que se ha realizado)
+        - total_pagado  → suma de AbonoConsulta (lo que el paciente ha pagado)
+        - saldo         → diferencia entre ambos
+        """
+        from apps.consultas.models import VisitaTratamiento, AbonoConsulta
         from django.db.models import Sum
-        self.total_cobrado = qs.aggregate(t=Sum('total'))['t'] or 0
-        self.total_pagado  = qs.aggregate(t=Sum('abono'))['t'] or 0
-        self.saldo         = float(self.total_cobrado) - float(self.total_pagado)
-        self.save(update_fields=['total_cobrado','total_pagado','saldo'])
+
+        consultas_ids = self.paciente.consultas.filter(
+            status=True).values_list('pk', flat=True)
+
+        self.total_cobrado = (
+                VisitaTratamiento.objects
+                .filter(status=True, consulta_id__in=consultas_ids)
+                .aggregate(t=Sum('costo'))['t'] or 0
+        )
+        self.total_pagado = (
+                AbonoConsulta.objects
+                .filter(status=True, consulta_id__in=consultas_ids)
+                .aggregate(t=Sum('monto'))['t'] or 0
+        )
+        self.saldo = float(self.total_cobrado) - float(self.total_pagado)
+        self.save(update_fields=['total_cobrado', 'total_pagado', 'saldo'])
 
 
 class MovimientoFinanciero(ModeloBase):

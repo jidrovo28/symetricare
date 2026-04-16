@@ -1,4 +1,5 @@
 {% extends "base/admin_base.html" %}
+{% load static %}
 {% block title %}Nueva Consulta{% endblock %}{% block n_con %}active{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="/consultas/">Consultas</a></li>
@@ -264,4 +265,5 @@ async function guardarConsulta() {
   } catch(ex) { App.loading(false); App.toast(ex.message,'danger'); }
 }
 </script>
+    <script src="{% static 'js/main.js' %}"></script>
 {% endblock %}

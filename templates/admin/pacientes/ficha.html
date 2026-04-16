@@ -7,18 +7,16 @@
 {% endblock %}
 
 {% block content %}
-
-    <!-- ── Cabecera del paciente ─────────────────────────────────────────── -->
+    <!-- ── Cabecera ───────────────────────────────────────────────────── -->
     <div class="card mb-3">
         <div class="card-body py-3">
             <div class="row align-items-center g-3">
-                <div class="col-md-1 text-center d-none d-md-block">
-                    <div style="width:56px;height:56px;background:var(--primary-lt);border-radius:50%;
-                    display:flex;align-items:center;justify-content:center;margin:0 auto">
+                <div class="col-auto d-none d-md-block">
+                    <div style="width:52px;height:52px;background:var(--primary-lt);border-radius:50%;display:flex;align-items:center;justify-content:center">
                         <i class="bi bi-person-fill fs-4" style="color:var(--primary)"></i>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-5">
                     <h5 class="fw-700 mb-1" style="color:var(--primary)">{{ pac.nombre_completo }}</h5>
                     <div class="d-flex flex-wrap gap-2 small text-muted">
                         <span><i class="bi bi-card-text me-1"></i><strong>{{ pac.identificacion }}</strong></span>
@@ -28,306 +26,136 @@
                         {% if pac.email %}<span><i class="bi bi-envelope me-1"></i>{{ pac.email }}</span>{% endif %}
                         <span><i class="bi bi-people me-1"></i>{{ pac.num_hijos }} hijo(s)</span>
                     </div>
-                    {% if pac.direccion %}
-                        <div class="small text-muted mt-1"><i
-                                class="bi bi-geo-alt me-1"></i>{{ pac.direccion|truncatechars:60 }}</div>
-                    {% endif %}
                 </div>
                 <div class="col-md-3">
                     {% if cuenta %}
                         <div class="d-flex gap-3">
                             <div class="text-center">
-                                <div class="fw-700 text-success">${{ cuenta.total_pagado|floatformat:2 }}</div>
-                                <div class="small text-muted" style="font-size:.7rem">Pagado</div>
+                                <div class="fw-700 text-success small">${{ cuenta.total_pagado|floatformat:2 }}</div>
+                                <div class="text-muted" style="font-size:.65rem">Pagado</div>
                             </div>
                             <div class="text-center">
-                                <div class="fw-700 {% if cuenta.saldo > 0 %}text-danger{% else %}text-success{% endif %}">
+                                <div class="fw-700 {% if cuenta.saldo > 0 %}text-danger{% else %}text-success{% endif %} small">
                                     ${{ cuenta.saldo|floatformat:2 }}</div>
-                                <div class="small text-muted" style="font-size:.7rem">Saldo</div>
+                                <div class="text-muted" style="font-size:.65rem">Saldo</div>
                             </div>
                             <div class="text-center">
-                                <div class="fw-700">${{ cuenta.total_cobrado|floatformat:2 }}</div>
-                                <div class="small text-muted" style="font-size:.7rem">Total</div>
+                                <div class="fw-700 small">${{ cuenta.total_cobrado|floatformat:2 }}</div>
+                                <div class="text-muted" style="font-size:.65rem">Total</div>
                             </div>
                         </div>
                     {% endif %}
                 </div>
-                <div class="col-md-2 text-md-end d-flex d-md-block gap-2 justify-content-start">
-                    <a href="/consultas/?action=nueva&paciente_id={{ pac.pk }}"
-                       class="btn btn-primary btn-sm d-block mb-1">
+                <div class="col-md-3 text-md-end">
+                    <a href="/consultas/?action=nueva&paciente_id={{ pac.pk }}" class="btn btn-primary btn-sm mb-1">
                         <i class="bi bi-clipboard2-plus me-1"></i>Nueva Consulta
                     </a>
-                    <div class="d-flex gap-1 justify-content-md-end">
+                    <div class="d-flex gap-1 justify-content-md-end mt-1">
                         <button class="btn btn-outline-primary btn-sm" onclick="App.modal('/citas/',{action:'add'})"
-                                title="Agendar cita">
-                            <i class="bi bi-calendar-plus"></i>
-                        </button>
+                                title="Agendar"><i class="bi bi-calendar-plus"></i></button>
                         <button class="btn btn-outline-secondary btn-sm"
-                                onclick="App.modal('/pacientes/',{action:'edit',id:{{ pac.pk }}})" title="Editar datos">
-                            <i class="bi bi-pencil"></i>
-                        </button>
+                                onclick="App.modal('/pacientes/',{action:'edit',id:{{ pac.pk }}})" title="Editar"><i
+                                class="bi bi-pencil"></i></button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ── Tabs principales ──────────────────────────────────────────────── -->
+    <!-- ── Tabs ───────────────────────────────────────────────────────── -->
     <ul class="nav nav-tabs mb-3" id="fichaTabs">
         <li class="nav-item">
-            <button class="nav-link active fw-600" data-bs-toggle="tab" data-bs-target="#tabResumen">
-                <i class="bi bi-grid-3x3-gap me-1"></i>Resumen
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link fw-600" data-bs-toggle="tab" data-bs-target="#tabHistorial">
+            <button class="nav-link active fw-600" data-bs-toggle="tab" data-bs-target="#tabHistorial">
                 <i class="bi bi-clock-history me-1"></i>Historial
                 <span class="badge bg-primary ms-1">{{ consultas|length }}</span>
             </button>
         </li>
-        {% if citas %}
-            <li class="nav-item">
-                <button class="nav-link fw-600" data-bs-toggle="tab" data-bs-target="#tabCitas">
-                    <i class="bi bi-calendar-check me-1"></i>Citas
-                    <span class="badge bg-warning text-dark ms-1">{{ citas|length }}</span>
-                </button>
-            </li>
-        {% endif %}
+        <li class="nav-item">
+            <button class="nav-link fw-600" data-bs-toggle="tab" data-bs-target="#tabAPF">
+                <i class="bi bi-people-fill me-1"></i>APF
+                {% if todos_apf %}<span class="badge bg-secondary ms-1">{{ todos_apf|length }}</span>{% endif %}
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-600" data-bs-toggle="tab" data-bs-target="#tabAPP">
+                <i class="bi bi-person-fill me-1"></i>APP
+                {% if todos_app %}<span class="badge bg-secondary ms-1">{{ todos_app|length }}</span>{% endif %}
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-600" data-bs-toggle="tab" data-bs-target="#tabAlergias">
+                <i class="bi bi-exclamation-triangle-fill me-1" style="color:#ef4444"></i>Alergias
+                {% if todas_alg %}<span class="badge bg-danger ms-1">{{ todas_alg|length }}</span>{% endif %}
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-600" data-bs-toggle="tab" data-bs-target="#tabMedicamentos">
+                <i class="bi bi-capsule me-1"></i>Medicamentos
+                {% if todos_med %}<span class="badge bg-secondary ms-1">{{ todos_med|length }}</span>{% endif %}
+            </button>
+        </li>
+        <li class="nav-item dropdown">
+            <button class="nav-link fw-600 dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="bi bi-three-dots me-1"></i>Más
+            </button>
+            <ul class="dropdown-menu">
+                <li>
+                    <button class="dropdown-item" data-bs-toggle="tab" data-bs-target="#tabSupHab">Suplementos /
+                        Hábitos
+                    </button>
+                </li>
+                <li>
+                    <button class="dropdown-item" data-bs-toggle="tab" data-bs-target="#tabActividad">Actividad Física
+                    </button>
+                </li>
+                <li>
+                    <button class="dropdown-item" data-bs-toggle="tab" data-bs-target="#tabTratRealizados">Tratamientos
+                        Realizados
+                    </button>
+                </li>
+                {% if citas %}
+                    <li>
+                        <button class="dropdown-item" data-bs-toggle="tab" data-bs-target="#tabCitas">Citas</button>
+                    </li>{% endif %}
+            </ul>
+        </li>
     </ul>
 
     <div class="tab-content">
 
-        <!-- ════════════════ TAB RESUMEN ════════════════ -->
-        <div class="tab-pane fade show active" id="tabResumen">
-            {% if consultas %}
-                <!-- Datos de la última consulta -->
-                {% with ultima=consultas.0 %}
-                    <div class="row g-3 mb-3">
-                        <div class="col-12">
-                            <div class="d-flex align-items-center gap-2 mb-2">
-                                <span class="badge bg-primary bg-opacity-10 text-primary">Última consulta: {{ ultima.fecha_creacion|date:"d/m/Y" }}</span>
-                                {% if ultima.profesional %}
-                                    <span class="small text-muted">{{ ultima.profesional.nombre_completo }}</span>{% endif %}
-                            </div>
-                        </div>
-
-                        <!-- Cada sección solo si tiene datos -->
-                        {% with apf=ultima.apf.all %}{% if apf %}
-                            <div class="col-md-6 col-lg-4">
-                                <div class="card h-100 border-0" style="background:#f9fafb">
-                                    <div class="card-body py-2 px-3">
-                                        <div class="small fw-700 mb-2" style="color:#4f46e5">
-                                            <i class="bi bi-people-fill me-1"></i>APF
-                                        </div>
-                                        <div class="d-flex flex-wrap gap-1">
-                                            {% for a in apf %}
-                                                <span class="badge"
-                                                      style="background:#e0e7ff;color:#4f46e5;font-weight:500;font-size:.75rem">{{ a.descripcion|truncatechars:40 }}</span>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endif %}{% endwith %}
-
-                        {% with app=ultima.app.all %}{% if app %}
-                            <div class="col-md-6 col-lg-4">
-                                <div class="card h-100 border-0" style="background:#f9fafb">
-                                    <div class="card-body py-2 px-3">
-                                        <div class="small fw-700 mb-2" style="color:#4f46e5">
-                                            <i class="bi bi-person-fill me-1"></i>APP
-                                        </div>
-                                        <div class="d-flex flex-wrap gap-1">
-                                            {% for a in app %}
-                                                <span class="badge"
-                                                      style="background:#e0e7ff;color:#4f46e5;font-weight:500;font-size:.75rem">
-              {{ a.descripcion|truncatechars:35 }}{% if a.fecha_diagnostico %} ({{ a.fecha_diagnostico|date:"d/m/Y" }}
-                  ){% endif %}
-            </span>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endif %}{% endwith %}
-
-                        {% with alergias=ultima.alergias.all %}{% if alergias %}
-                            <div class="col-md-6 col-lg-4">
-                                <div class="card h-100 border-0" style="background:#fff5f5">
-                                    <div class="card-body py-2 px-3">
-                                        <div class="small fw-700 mb-2" style="color:#b91c1c">
-                                            <i class="bi bi-exclamation-triangle-fill me-1"></i>Alergias
-                                        </div>
-                                        <div class="d-flex flex-wrap gap-1">
-                                            {% for a in alergias %}
-                                                <span class="badge"
-                                                      style="background:#fee2e2;color:#b91c1c;font-weight:500;font-size:.75rem">{{ a.descripcion }}</span>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endif %}{% endwith %}
-
-                        {% with meds=ultima.medicamentos.all %}{% if meds %}
-                            <div class="col-md-6 col-lg-4">
-                                <div class="card h-100 border-0" style="background:#f9fafb">
-                                    <div class="card-body py-2 px-3">
-                                        <div class="small fw-700 mb-2" style="color:#5b21b6">
-                                            <i class="bi bi-capsule me-1"></i>Medicamentos
-                                        </div>
-                                        <div class="d-flex flex-wrap gap-1">
-                                            {% for m in meds %}
-                                                <span class="badge"
-                                                      style="background:#ede9fe;color:#5b21b6;font-weight:500;font-size:.75rem">{{ m.descripcion }}</span>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endif %}{% endwith %}
-
-                        {% with sups=ultima.suplementos.all %}{% if sups %}
-                            <div class="col-md-6 col-lg-4">
-                                <div class="card h-100 border-0" style="background:#f0fdf4">
-                                    <div class="card-body py-2 px-3">
-                                        <div class="small fw-700 mb-2" style="color:#065f46">
-                                            <i class="bi bi-droplet-fill me-1"></i>Suplementos
-                                        </div>
-                                        <div class="d-flex flex-wrap gap-1">
-                                            {% for s in sups %}
-                                                <span class="badge"
-                                                      style="background:#d1fae5;color:#065f46;font-weight:500;font-size:.75rem">{{ s.descripcion }}</span>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endif %}{% endwith %}
-
-                        {% with habs=ultima.habitos.all %}{% if habs %}
-                            <div class="col-md-6 col-lg-4">
-                                <div class="card h-100 border-0" style="background:#f9fafb">
-                                    <div class="card-body py-2 px-3">
-                                        <div class="small fw-700 mb-2" style="color:#5b21b6">
-                                            <i class="bi bi-arrow-repeat me-1"></i>Hábitos
-                                        </div>
-                                        <div class="d-flex flex-wrap gap-1">
-                                            {% for h in habs %}
-                                                <span class="badge"
-                                                      style="background:#ede9fe;color:#5b21b6;font-weight:500;font-size:.75rem">{{ h.descripcion }}</span>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endif %}{% endwith %}
-
-                        {% with acts=ultima.actividades_fisicas.all %}{% if acts %}
-                            <div class="col-md-6 col-lg-4">
-                                <div class="card h-100 border-0" style="background:#fffbeb">
-                                    <div class="card-body py-2 px-3">
-                                        <div class="small fw-700 mb-2" style="color:#92400e">
-                                            <i class="bi bi-lightning-fill me-1"></i>Actividad Física
-                                        </div>
-                                        <div class="d-flex flex-wrap gap-1">
-                                            {% for a in acts %}
-                                                <span class="badge"
-                                                      style="background:#fef3c7;color:#92400e;font-weight:500;font-size:.75rem">{{ a.descripcion }}</span>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endif %}{% endwith %}
-
-                    </div>
-
-                    <!-- Diagnóstico y observaciones de la última -->
-                    {% if ultima.diagnostico or ultima.observaciones %}
-                        <div class="card border-0" style="background:#f9fafb">
-                            <div class="card-body py-2 px-3">
-                                <div class="row g-3">
-                                    {% if ultima.motivo_consulta %}
-                                        <div class="col-md-4">
-                                            <div class="small fw-700 text-muted mb-1">Motivo</div>
-                                            <div class="small">{{ ultima.motivo_consulta }}</div>
-                                        </div>
-                                    {% endif %}
-                                    {% if ultima.diagnostico %}
-                                        <div class="col-md-4">
-                                            <div class="small fw-700 text-muted mb-1">Diagnóstico</div>
-                                            <div class="small">{{ ultima.diagnostico }}</div>
-                                        </div>
-                                    {% endif %}
-                                    {% if ultima.observaciones %}
-                                        <div class="col-md-4">
-                                            <div class="small fw-700 text-muted mb-1">Observaciones</div>
-                                            <div class="small">{{ ultima.observaciones }}</div>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    {% endif %}
-
-                {% endwith %}
-            {% else %}
-                <div class="text-center py-5 text-muted">
-                    <i class="bi bi-clipboard2-x fs-2 mb-2 d-block"></i>
-                    Sin consultas registradas aún.
-                    <div class="mt-2">
-                        <a href="/consultas/?action=nueva&paciente_id={{ pac.pk }}" class="btn btn-primary btn-sm">
-                            <i class="bi bi-clipboard2-plus me-1"></i>Registrar primera consulta
-                        </a>
-                    </div>
-                </div>
-            {% endif %}
-        </div>
-
-        <!-- ════════════════ TAB HISTORIAL ════════════════ -->
-        <div class="tab-pane fade" id="tabHistorial">
+        <!-- ══════════════ TAB HISTORIAL ══════════════ -->
+        <div class="tab-pane fade show active" id="tabHistorial">
             {% if consultas %}
                 <div class="accordion" id="accordionConsultas">
                     {% for c in consultas %}
-                        <div class="accordion-item border mb-2 rounded overflow-hidden">
+                        <div class="card border mb-2 rounded overflow-hidden">
 
-                            <!-- Cabecera colapsable: fecha, motivo resumido, total, estado -->
+                            <!-- Cabecera del acordeón -->
                             <div class="accordion-header">
-                                <button class="accordion-button collapsed py-2 px-3" type="button"
-                                        data-bs-toggle="collapse" data-bs-target="#con{{ c.pk }}">
+                                <button class="accordion-button {% if not forloop.first %}collapsed{% endif %} py-2 px-3"
+                                        type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#con{{ c.pk }}">
                                     <div class="d-flex align-items-center gap-3 w-100 me-2">
-
-                                        <!-- Fecha -->
                                         <div class="text-center flex-shrink-0" style="min-width:46px">
                                             <div class="fw-700"
                                                  style="color:var(--primary);font-size:.85rem">{{ c.fecha_creacion|date:"d" }}</div>
                                             <div style="font-size:.65rem;color:#9ca3af;text-transform:uppercase">{{ c.fecha_creacion|date:"M Y" }}</div>
                                         </div>
-
-                                        <!-- Motivo -->
                                         <div class="flex-grow-1 small">
-                                            <span class="fw-600">{{ c.motivo_consulta|truncatechars:60 }}</span>
+                                            <span class="fw-600">{{ c.motivo_consulta|truncatechars:55 }}</span>
                                             {% if c.diagnostico %}
-                                                <span class="text-muted ms-2">— {{ c.diagnostico|truncatechars:40 }}</span>
-                                            {% endif %}
+                                                <span class="text-muted ms-2">— {{ c.diagnostico|truncatechars:35 }}</span>{% endif %}
                                         </div>
-
-                                        <!-- Indicadores rápidos -->
                                         <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                                            <!-- Chips de tipo si tiene antecedentes -->
-                                            {% if c.alergias.all %}
-                                                <i class="bi bi-exclamation-triangle-fill text-danger"
-                                                   title="Alergias registradas"></i>{% endif %}
-                                            {% if c.medicamentos.all %}<i class="bi bi-capsule" style="color:#7c3aed"
-                                                                          title="Medicamentos"></i>{% endif %}
-                                            <!-- Total y saldo -->
+              <span class="badge" style="background:#e0e7ff;color:#4f46e5;font-size:.65rem">
+                {{ c.num_visitas }} visita(s)
+              </span>
                                             <div class="text-end">
-                                                <div class="small fw-600">${{ c.total|floatformat:2 }}</div>
+                                                <div class="small fw-600">Total ${{ c.total|floatformat:2 }}</div>
+                                                <div class="small fw-600 text-success">Abonado ${{ c.abono|floatformat:2 }}</div>
                                                 {% if c.saldo > 0 %}
-                                                    <div style="font-size:.68rem" class="text-danger">debe
-                                                        ${{ c.saldo|floatformat:2 }}</div>
-                                                {% endif %}
+                                                    <div style="font-size:.88rem" class="text-danger">Saldo
+                                                        ${{ c.saldo|floatformat:2 }}</div>{% endif %}
                                             </div>
                                             <span class="badge badge-{{ c.estado }}">{{ c.get_estado_display }}</span>
                                         </div>
@@ -335,229 +163,124 @@
                                 </button>
                             </div>
 
-                            <!-- Contenido expandido -->
-                            <div id="con{{ c.pk }}" class="accordion-collapse collapse">
+                            <!-- Cuerpo expandido -->
+                            <div id="con{{ c.pk }}"
+                                 class="accordion-collapse collapse {% if forloop.first %}show{% endif %}">
                                 <div class="accordion-body pt-2 pb-3">
                                     <div class="row g-3">
 
-                                        <!-- Columna izquierda: datos clínicos -->
+                                        <!-- Datos clínicos -->
                                         <div class="col-lg-5">
-                                            <div class="d-flex flex-column gap-2">
-                                                {% if c.motivo_consulta %}
-                                                    <div>
-                                                        <div class="small fw-700 text-muted mb-1">Motivo</div>
-                                                        <div class="small">{{ c.motivo_consulta }}</div>
-                                                    </div>
-                                                {% endif %}
-                                                {% if c.diagnostico %}
-                                                    <div>
-                                                        <div class="small fw-700 text-muted mb-1">Diagnóstico</div>
-                                                        <div class="small">{{ c.diagnostico }}</div>
-                                                    </div>
-                                                {% endif %}
-                                                {% if c.observaciones %}
-                                                    <div>
-                                                        <div class="small fw-700 text-muted mb-1">Observaciones</div>
-                                                        <div class="small">{{ c.observaciones }}</div>
-                                                    </div>
-                                                {% endif %}
-                                                <div class="small text-muted">Hijos al momento:
-                                                    <strong>{{ c.num_hijos }}</strong></div>
-                                                {% if c.profesional %}
-                                                    <div class="small text-muted">Profesional:
-                                                        <strong>{{ c.profesional.nombre_completo }}</strong></div>
+                                            {% if c.motivo_consulta %}
+                                                <div class="mb-2">
+                                                    <div class="small fw-700 text-muted">Motivo</div>
+                                                    <div class="small">{{ c.motivo_consulta }}</div>
+                                                </div>{% endif %}
+                                            {% if c.diagnostico %}
+                                                <div class="mb-2">
+                                                    <div class="small fw-700 text-muted">Diagnóstico</div>
+                                                    <div class="small">{{ c.diagnostico }}</div>
+                                                </div>{% endif %}
+                                            {% if c.observaciones %}
+                                                <div class="mb-2">
+                                                    <div class="small fw-700 text-muted">Observaciones</div>
+                                                    <div class="small">{{ c.observaciones }}</div>
+                                                </div>{% endif %}
+
+                                            {% with props=c.get_tratamientos %}
+                                                {% if props %}
+                                                    <div class="mt-2 pt-2 border-top">
+                                                        <div class="small fw-700 text-muted mb-1">Plan propuesto</div>
+                                                        {% for t in props %}
+                                                            <div class="d-flex justify-content-between small text-muted mb-1">
+                                                                <span>{{ t.servicio.nombre }}</span>
+                                                                <span>${{ t.costo|floatformat:2 }}</span>
+                                                            </div>{% endfor %}
+                                                    </div>{% endif %}{% endwith %}
+                                        </div>
+
+                                        <!-- Visitas realizadas -->
+                                        <div class="col-lg-7">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <div class="small fw-700" style="color:var(--primary)">
+                                                    <i class="bi bi-scissors me-1"></i>Tratamientos realizados
+                                                </div>
+                                                {% if c.estado == 'pendiente' %}
+                                                    <button class="btn btn-xs btn-primary"
+                                                            onclick="abrirModalVisita({{ c.pk }})">
+                                                        <i class="bi bi-plus-circle me-1"></i>Registrar visita
+                                                    </button>
                                                 {% endif %}
                                             </div>
 
-                                            <!-- Tratamientos propuestos -->
-                                            {% with trats=c.tratamientos.all %}{% if trats %}
-                                                <div class="mt-3 pt-2 border-top">
-                                                    <div class="small fw-700 text-muted mb-2">Tratamientos propuestos
-                                                    </div>
-                                                    {% for t in trats %}
-                                                        <div class="d-flex justify-content-between small mb-1">
-                                                            <span>{{ t.servicio.nombre }}</span>
-                                                            <span class="fw-600">${{ t.costo|floatformat:2 }}</span>
+                                            <!-- Lista de visitas -->
+                                            <div id="visitas-{{ c.pk }}">
+                                                {% for v in c.get_visitas %}
+                                                    <div class="d-flex justify-content-between align-items-start py-2 border-bottom">
+                                                        <div>
+                                                            <div class="small fw-600">{{ v.servicio.nombre }}</div>
+                                                            <div class="d-flex gap-2 mt-1 flex-wrap">
+                                                                <span class="text-muted" style="font-size:.72rem"><i
+                                                                        class="bi bi-calendar me-1"></i>{{ v.fecha|date:"d/m/Y" }}</span>
+                                                                {% if v.tipo_servicio %}<span class="badge"
+                                                                                              style="background:{{ v.tipo_servicio.color }}22;color:{{ v.tipo_servicio.color }};font-size:.65rem">{{ v.tipo_servicio.nombre }}</span>{% endif %}
+                                                                {% if v.forma_pago %}
+                                                                    <span class="text-muted" style="font-size:.72rem"><i
+                                                                            class="bi bi-cash me-1"></i>{{ v.forma_pago }}</span>{% endif %}
+                                                            </div>
+                                                            {% if v.descripcion %}
+                                                                <div class="text-muted"
+                                                                     style="font-size:.72rem">{{ v.descripcion }}</div>{% endif %}
+                                                            {% if v.tratamiento_propuesto %}
+                                                                <div style="font-size:.68rem;color:var(--primary)"><i
+                                                                        class="bi bi-link me-1"></i>{{ v.tratamiento_propuesto.servicio.nombre }}
+                                                                </div>{% endif %}
                                                         </div>
-                                                        {% if t.observacion %}
-                                                            <div class="small text-muted ms-2 mb-1"
-                                                                 style="font-size:.72rem">{{ t.observacion }}</div>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                    <div class="d-flex justify-content-between small border-top pt-1 mt-1 text-muted">
-                                                        <span>Descuento</span><span>-${{ c.descuento|floatformat:2 }}</span>
+                                                        <div class="text-end ms-2 flex-shrink-0">
+                                                            <div class="fw-700 text-danger small">
+                                                                ${{ v.costo|floatformat:2 }}</div>
+                                                            <div class="fw-700 text-success small">
+                                                                Abona ${{ v.abono|floatformat:2 }}</div>
+                                                            {% if c.estado == 'pendiente' %}
+                                                                <button class="btn btn-xs btn-link text-danger p-0 mt-1"
+                                                                        onclick="eliminarVisita({{ v.pk }})">
+                                                                    <i class="bi bi-trash" style="font-size:.75rem"></i>
+                                                                </button>
+                                                            {% endif %}
+                                                        </div>
                                                     </div>
-                                                    <div class="d-flex justify-content-between small fw-700">
-                                                        <span>Total</span><span
-                                                            style="color:var(--primary)">${{ c.total|floatformat:2 }}</span>
+                                                {% empty %}
+                                                    <div class="text-muted small py-1">
+                                                        Sin visitas registradas.
+                                                        {% if c.estado == 'pendiente' %}La deuda se generará alregistrar
+                                                            la primera visita.{% endif %}
                                                     </div>
-                                                    <div class="d-flex justify-content-between small">
-                                                        <span class="text-muted">Abonado</span><span
-                                                            class="text-success">${{ c.abono|floatformat:2 }}</span>
-                                                    </div>
+                                                {% endfor %}
+                                            </div>
+
+                                            <!-- Totales + acciones -->
+                                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2 pt-2 border-top">
+                                                <div class="d-flex gap-3 small">
+                                                    <span>Total: <strong>${{ c.total|floatformat:2 }}</strong></span>
+                                                    <span class="text-success">Pagado: <strong>${{ c.abono|floatformat:2 }}</strong></span>
                                                     {% if c.saldo > 0 %}
-                                                        <div class="d-flex justify-content-between small fw-600 text-danger">
-                                                            <span>Saldo pendiente</span><span>${{ c.saldo|floatformat:2 }}</span>
-                                                        </div>
+                                                        <span class="text-danger fw-700">Saldo: ${{ c.saldo|floatformat:2 }}</span>{% endif %}
+                                                </div>
+                                                <div class="d-flex gap-1">
+                                                    {% if c.saldo > 0 %}
+                                                        <button class="btn btn-xs btn-success"
+                                                                onclick="App.modal('/consultas/',{action:'abonar',id:{{ c.pk }}})">
+                                                            <i class="bi bi-cash me-1"></i>Abonar
+                                                        </button>
+                                                    {% endif %}
+                                                    {% if c.estado == 'pendiente' %}
+                                                        <button class="btn btn-xs btn-outline-danger fw-600"
+                                                                onclick="finalizarConsulta({{ c.pk }})">
+                                                            <i class="bi bi-check2-all me-1"></i>Finalizar consulta
+                                                        </button>
                                                     {% endif %}
                                                 </div>
-                                            {% endif %}{% endwith %}
-
-                                            {% if c.saldo > 0 %}
-                                                <button class="btn btn-success btn-sm mt-2"
-                                                        onclick="App.modal('/consultas/',{action:'abonar',id:{{ c.pk }}})">
-                                                    <i class="bi bi-cash me-1"></i>Registrar abono
-                                                </button>
-                                            {% endif %}
-                                        </div>
-
-                                        <!-- Columna derecha: antecedentes de esta consulta -->
-                                        <div class="col-lg-7">
-                                            {% with apf=c.apf.all app=c.app.all alergias=c.alergias.all meds=c.medicamentos.all sups=c.suplementos.all habs=c.habitos.all acts=c.actividades_fisicas.all trats_r=c.tratamientos_realizados.all %}
-                                                {% if apf or app or alergias or meds or sups or habs or acts or trats_r %}
-                                                    <div class="small fw-700 text-muted mb-2">Antecedentes de esta
-                                                        consulta
-                                                    </div>
-                                                    <div class="row g-2">
-
-                                                        {% if apf %}
-                                                            <div class="col-12">
-                                                                <div class="p-2 rounded" style="background:#f1f5ff">
-                                                                    <div class="small fw-600 mb-1"
-                                                                         style="color:#4f46e5"><i
-                                                                            class="bi bi-people-fill me-1"></i>APF
-                                                                    </div>
-                                                                    <div class="d-flex flex-wrap gap-1">
-                                                                        {% for a in apf %}<span class="badge"
-                                                                                                style="background:#e0e7ff;color:#4f46e5;font-size:.72rem;font-weight:500">{{ a.descripcion }}</span>{% endfor %}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        {% endif %}
-
-                                                        {% if app %}
-                                                            <div class="col-12">
-                                                                <div class="p-2 rounded" style="background:#f1f5ff">
-                                                                    <div class="small fw-600 mb-1"
-                                                                         style="color:#4f46e5"><i
-                                                                            class="bi bi-person-fill me-1"></i>APP
-                                                                    </div>
-                                                                    <div class="d-flex flex-wrap gap-1">
-                                                                        {% for a in app %}
-                                                                            <span class="badge"
-                                                                                  style="background:#e0e7ff;color:#4f46e5;font-size:.72rem;font-weight:500">
-                        {{ a.descripcion }}{% if a.fecha_diagnostico %} ·
-                            {{ a.fecha_diagnostico|date:"d/m/Y" }}{% endif %}
-                      </span>
-                                                                        {% endfor %}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        {% endif %}
-
-                                                        {% if alergias %}
-                                                            <div class="col-md-6">
-                                                                <div class="p-2 rounded" style="background:#fff5f5">
-                                                                    <div class="small fw-600 mb-1"
-                                                                         style="color:#b91c1c"><i
-                                                                            class="bi bi-exclamation-triangle-fill me-1"></i>Alergias
-                                                                    </div>
-                                                                    <div class="d-flex flex-wrap gap-1">
-                                                                        {% for a in alergias %}<span class="badge"
-                                                                                                     style="background:#fee2e2;color:#b91c1c;font-size:.72rem;font-weight:500">{{ a.descripcion }}</span>{% endfor %}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        {% endif %}
-
-                                                        {% if meds %}
-                                                            <div class="col-md-6">
-                                                                <div class="p-2 rounded" style="background:#faf5ff">
-                                                                    <div class="small fw-600 mb-1"
-                                                                         style="color:#5b21b6"><i
-                                                                            class="bi bi-capsule me-1"></i>Medicamentos
-                                                                    </div>
-                                                                    <div class="d-flex flex-wrap gap-1">
-                                                                        {% for m in meds %}<span class="badge"
-                                                                                                 style="background:#ede9fe;color:#5b21b6;font-size:.72rem;font-weight:500">{{ m.descripcion }}</span>{% endfor %}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        {% endif %}
-
-                                                        {% if sups %}
-                                                            <div class="col-md-6">
-                                                                <div class="p-2 rounded" style="background:#f0fdf4">
-                                                                    <div class="small fw-600 mb-1"
-                                                                         style="color:#065f46"><i
-                                                                            class="bi bi-droplet-fill me-1"></i>Suplementos
-                                                                    </div>
-                                                                    <div class="d-flex flex-wrap gap-1">
-                                                                        {% for s in sups %}<span class="badge"
-                                                                                                 style="background:#d1fae5;color:#065f46;font-size:.72rem;font-weight:500">{{ s.descripcion }}</span>{% endfor %}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        {% endif %}
-
-                                                        {% if habs %}
-                                                            <div class="col-md-6">
-                                                                <div class="p-2 rounded" style="background:#faf5ff">
-                                                                    <div class="small fw-600 mb-1"
-                                                                         style="color:#5b21b6"><i
-                                                                            class="bi bi-arrow-repeat me-1"></i>Hábitos
-                                                                    </div>
-                                                                    <div class="d-flex flex-wrap gap-1">
-                                                                        {% for h in habs %}<span class="badge"
-                                                                                                 style="background:#ede9fe;color:#5b21b6;font-size:.72rem;font-weight:500">{{ h.descripcion }}</span>{% endfor %}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        {% endif %}
-
-                                                        {% if acts %}
-                                                            <div class="col-md-6">
-                                                                <div class="p-2 rounded" style="background:#fffbeb">
-                                                                    <div class="small fw-600 mb-1"
-                                                                         style="color:#92400e"><i
-                                                                            class="bi bi-lightning-fill me-1"></i>Actividad
-                                                                        Física
-                                                                    </div>
-                                                                    <div class="d-flex flex-wrap gap-1">
-                                                                        {% for a in acts %}<span class="badge"
-                                                                                                 style="background:#fef3c7;color:#92400e;font-size:.72rem;font-weight:500">{{ a.descripcion }}</span>{% endfor %}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        {% endif %}
-
-                                                        {% if trats_r %}
-                                                            <div class="col-12">
-                                                                <div class="p-2 rounded" style="background:#f0fdf4">
-                                                                    <div class="small fw-600 mb-1"
-                                                                         style="color:#065f46"><i
-                                                                            class="bi bi-check2-circle me-1"></i>Tratamientos
-                                                                        Realizados
-                                                                    </div>
-                                                                    <div class="d-flex flex-wrap gap-1">
-                                                                        {% for t in trats_r %}
-                                                                            <span class="badge"
-                                                                                  style="background:#d1fae5;color:#065f46;font-size:.72rem;font-weight:500">
-                        {{ t.descripcion }}{% if t.fecha %} · {{ t.fecha|date:"d/m/Y" }}{% endif %}
-                      </span>
-                                                                        {% endfor %}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        {% endif %}
-
-                                                    </div>
-                                                {% else %}
-                                                    <div class="text-muted small py-2">Sin antecedentes registrados en
-                                                        esta consulta.
-                                                    </div>
-                                                {% endif %}
-                                            {% endwith %}
+                                            </div>
                                         </div>
 
                                     </div>
@@ -568,12 +291,256 @@
                 </div>
             {% else %}
                 <div class="text-center py-5 text-muted">
-                    <i class="bi bi-clipboard2-x fs-2 mb-2 d-block"></i>Sin historial aún.
+                    <i class="bi bi-clipboard2-x fs-2 mb-2 d-block"></i>Sin consultas.
+                    <a href="/consultas/?action=nueva&paciente_id={{ pac.pk }}" class="btn btn-primary btn-sm mt-2">
+                        <i class="bi bi-clipboard2-plus me-1"></i>Registrar primera consulta
+                    </a>
                 </div>
             {% endif %}
         </div>
 
-        <!-- ════════════════ TAB CITAS ════════════════ -->
+        <!-- ══════════════ TAB APF ══════════════ -->
+        <div class="tab-pane fade" id="tabAPF">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-people-fill me-2" style="color:#4f46e5"></i>Antecedentes
+                    Patológicos Familiares
+                </div>
+                <div class="card-body p-0">
+                    {% if todos_apf %}
+                        <table class="table table-sm mb-0">
+                            <thead>
+                            <tr>
+                                <th>Consulta</th>
+                                <th>Descripción</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for con, item in todos_apf %}
+                                <tr>
+                                    <td class="small text-muted"
+                                        style="width:130px">{{ con.fecha_creacion|date:"d/m/Y" }}</td>
+                                    <td class="small">{{ item.descripcion }}</td>
+                                </tr>{% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p class="text-muted small p-3 mb-0">Sin antecedentes familiares registrados.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════ TAB APP ══════════════ -->
+        <div class="tab-pane fade" id="tabAPP">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-person-fill me-2" style="color:#4f46e5"></i>Antecedentes
+                    Patológicos Personales
+                </div>
+                <div class="card-body p-0">
+                    {% if todos_app %}
+                        <table class="table table-sm mb-0">
+                            <thead>
+                            <tr>
+                                <th>Consulta</th>
+                                <th>Descripción</th>
+                                <th>Fecha Dx</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for con, item in todos_app %}
+                                <tr>
+                                    <td class="small text-muted"
+                                        style="width:130px">{{ con.fecha_creacion|date:"d/m/Y" }}</td>
+                                    <td class="small">{{ item.descripcion }}</td>
+                                    <td class="small text-muted">{{ item.fecha_diagnostico|date:"d/m/Y"|default:"—" }}</td>
+                                </tr>{% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p class="text-muted small p-3 mb-0">Sin antecedentes personales registrados.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════ TAB ALERGIAS ══════════════ -->
+        <div class="tab-pane fade" id="tabAlergias">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-exclamation-triangle-fill me-2" style="color:#ef4444"></i>Alergias
+                </div>
+                <div class="card-body">
+                    {% if todas_alg %}
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for con, item in todas_alg %}
+                                <div class="d-flex flex-column align-items-start">
+        <span class="badge py-2 px-3" style="background:#fee2e2;color:#b91c1c;font-weight:500">
+          {{ item.descripcion }}
+        </span>
+                                    <span class="text-muted mt-1"
+                                          style="font-size:.65rem">{{ con.fecha_creacion|date:"d/m/Y" }}</span>
+                                </div>{% endfor %}
+                        </div>
+                    {% else %}<p class="text-muted small mb-0">Sin alergias registradas.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════ TAB MEDICAMENTOS ══════════════ -->
+        <div class="tab-pane fade" id="tabMedicamentos">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header"><i class="bi bi-capsule me-2" style="color:#5b21b6"></i>Medicamentos
+                        </div>
+                        <div class="card-body p-0">
+                            {% if todos_med %}
+                                <table class="table table-sm mb-0">
+                                    <thead>
+                                    <tr>
+                                        <th>Consulta</th>
+                                        <th>Medicamento</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for con, item in todos_med %}
+                                        <tr>
+                                            <td class="small text-muted"
+                                                style="width:130px">{{ con.fecha_creacion|date:"d/m/Y" }}</td>
+                                            <td class="small">{{ item.descripcion }}</td>
+                                        </tr>{% endfor %}
+                                    </tbody>
+                                </table>
+                            {% else %}<p class="text-muted small p-3 mb-0">Sin medicamentos.</p>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header"><i class="bi bi-droplet-fill me-2" style="color:#065f46"></i>Suplementos
+                        </div>
+                        <div class="card-body p-0">
+                            {% if todos_sup %}
+                                <table class="table table-sm mb-0">
+                                    <thead>
+                                    <tr>
+                                        <th>Consulta</th>
+                                        <th>Suplemento</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for con, item in todos_sup %}
+                                        <tr>
+                                            <td class="small text-muted"
+                                                style="width:130px">{{ con.fecha_creacion|date:"d/m/Y" }}</td>
+                                            <td class="small">{{ item.descripcion }}</td>
+                                        </tr>{% endfor %}
+                                    </tbody>
+                                </table>
+                            {% else %}<p class="text-muted small p-3 mb-0">Sin suplementos.</p>{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════ TAB SUPLEMENTOS + HÁBITOS ══════════════ -->
+        <div class="tab-pane fade" id="tabSupHab">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header"><i class="bi bi-droplet-fill me-2" style="color:#065f46"></i>Suplementos
+                        </div>
+                        <div class="card-body p-0">
+                            {% if todos_sup %}
+                                <table class="table table-sm mb-0">
+                                    <tbody>
+                                    {% for con, item in todos_sup %}
+                                        <tr>
+                                            <td class="small text-muted"
+                                                style="width:130px">{{ con.fecha_creacion|date:"d/m/Y" }}</td>
+                                            <td class="small">{{ item.descripcion }}</td>
+                                        </tr>{% endfor %}
+                                    </tbody>
+                                </table>
+                            {% else %}<p class="text-muted small p-3 mb-0">Sin suplementos.</p>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header"><i class="bi bi-arrow-repeat me-2" style="color:#5b21b6"></i>Hábitos
+                        </div>
+                        <div class="card-body p-0">
+                            {% if todos_hab %}
+                                <table class="table table-sm mb-0">
+                                    <tbody>
+                                    {% for con, item in todos_hab %}
+                                        <tr>
+                                            <td class="small text-muted"
+                                                style="width:130px">{{ con.fecha_creacion|date:"d/m/Y" }}</td>
+                                            <td class="small">{{ item.descripcion }}</td>
+                                        </tr>{% endfor %}
+                                    </tbody>
+                                </table>
+                            {% else %}<p class="text-muted small p-3 mb-0">Sin hábitos.</p>{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════ TAB ACTIVIDAD FÍSICA ══════════════ -->
+        <div class="tab-pane fade" id="tabActividad">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-lightning-fill me-2" style="color:#92400e"></i>Actividad Física
+                </div>
+                <div class="card-body">
+                    {% if todos_act %}
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for con, item in todos_act %}
+                                <div class="d-flex flex-column align-items-start">
+                                    <span class="badge py-2 px-3"
+                                          style="background:#fef3c7;color:#92400e;font-weight:500">{{ item.descripcion }}</span>
+                                    <span class="text-muted mt-1"
+                                          style="font-size:.65rem">{{ con.fecha_creacion|date:"d/m/Y" }}</span>
+                                </div>{% endfor %}
+                        </div>
+                    {% else %}<p class="text-muted small mb-0">Sin actividad física registrada.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════ TAB TRATAMIENTOS REALIZADOS ══════════════ -->
+        <div class="tab-pane fade" id="tabTratRealizados">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-check2-circle me-2" style="color:#065f46"></i>Tratamientos
+                    Realizados (antecedentes)
+                </div>
+                <div class="card-body p-0">
+                    {% if todos_tr %}
+                        <table class="table table-sm mb-0">
+                            <thead>
+                            <tr>
+                                <th>Consulta</th>
+                                <th>Tratamiento</th>
+                                <th>Fecha</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for con, item in todos_tr %}
+                                <tr>
+                                    <td class="small text-muted"
+                                        style="width:130px">{{ con.fecha_creacion|date:"d/m/Y" }}</td>
+                                    <td class="small">{{ item.descripcion }}</td>
+                                    <td class="small text-muted">{{ item.fecha|date:"d/m/Y"|default:"—" }}</td>
+                                </tr>{% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p class="text-muted small p-3 mb-0">Sin tratamientos realizados registrados.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════ TAB CITAS ══════════════ -->
         {% if citas %}
             <div class="tab-pane fade" id="tabCitas">
                 <div class="card">
@@ -585,26 +552,10 @@
                                     <span class="small text-muted ms-2"><i
                                             class="bi bi-clock me-1"></i>{{ c.hora|time:"H:i" }}</span>
                                     {% if c.servicio %}
-                                        <span class="badge bg-light text-muted ms-2">{{ c.servicio.nombre }}</span>{% endif %}
-                                    {% if c.notas %}
-                                        <div class="small text-muted mt-1">{{ c.notas|truncatechars:60 }}</div>{% endif %}
+                                        <span class="badge bg-light text-dark ms-2">{{ c.servicio.nombre }}</span>{% endif %}
                                 </div>
-                                <div class="d-flex align-items-center gap-2">
-
-                                    <!-- Badge más limpio -->
-                                    <span class="badge rounded-pill px-3 py-2 fw-500"
-                                          style="background-color:#eef2ff; color:#4f46e5;">{{ c.get_estado_display }}</span>
-
-                                    <!-- Botón soft moderno -->
-                                    <a href="/consultas/?action=nueva&paciente_id={{ c.paciente.id }}&cita_id={{ c.id }}"
-                                       class="btn btn-sm rounded-pill px-3 fw-500"
-                                       style="background-color:#e7f1ff; color:#0d6efd; border:none; transition: all .2s;">
-                                        <i class="bi bi-clipboard2-pulse me-1"></i> Atender
-                                    </a>
-
-                                </div>
-                            </div>
-                        {% endfor %}
+                                <span class="badge badge-{{ c.estado }}">{{ c.get_estado_display }}</span>
+                            </div>{% endfor %}
                     </div>
                 </div>
             </div>
@@ -612,4 +563,52 @@
 
     </div>{# end tab-content #}
 
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        async function abrirModalVisita(consultaId) {
+            const r = await fetch('/consultas/?action=modal_visita&id=' + consultaId);
+            const d = await r.json();
+            if (!d.result) {
+                App.toast(d.msg, 'danger');
+                return;
+            }
+            document.getElementById('mainModalBody').innerHTML = d.data;
+            const fechaEl = document.querySelector('#mainModalBody [name="fecha"]');
+            if (fechaEl && !fechaEl.value)
+                fechaEl.value = new Date().toISOString().slice(0, 10);
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('mainModal')).show();
+        }
+
+        async function eliminarVisita(visitaId) {
+            if (!confirm('¿Eliminar este tratamiento? Se reducirá la deuda.')) return;
+            const fd = new FormData();
+            fd.append('action', 'delete_visita');
+            fd.append('id', visitaId);
+            const r = await fetch('/consultas/', {
+                method: 'POST', body: fd, headers: {'X-CSRFToken': App.csrf()}
+            });
+            const d = await r.json();
+            if (d.result) {
+                App.toast('Tratamiento eliminado', 'success');
+                location.reload();
+            } else App.toast(d.msg, 'danger');
+        }
+
+        async function finalizarConsulta(consultaId) {
+            if (!confirm('¿Finalizar esta consulta?\nYa no se podrán agregar más visitas.')) return;
+            const fd = new FormData();
+            fd.append('action', 'finalizar');
+            fd.append('id', consultaId);
+            const r = await fetch('/consultas/', {
+                method: 'POST', body: fd, headers: {'X-CSRFToken': App.csrf()}
+            });
+            const d = await r.json();
+            if (d.result) {
+                App.toast('Consulta finalizada', 'success');
+                location.reload();
+            } else App.toast(d.msg, 'danger');
+        }
+    </script>
 {% endblock %}
