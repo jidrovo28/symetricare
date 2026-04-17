@@ -14,6 +14,7 @@ class Paciente(ModeloBase):
     apellido1                = models.CharField(max_length=100)
     apellido2                = models.CharField(max_length=100, blank=True)
     telefono                 = models.CharField(max_length=20, blank=True)
+    celular                  = models.CharField(max_length=20, blank=True, null=True)
     edad                     = models.IntegerField(null=True, blank=True)
     fecha_nacimiento         = models.DateField(null=True, blank=True)
     direccion                = models.TextField(blank=True)
