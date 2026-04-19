@@ -1,3 +1,5 @@
+import decimal
+from decimal import Decimal
 from datetime import date
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -126,7 +128,22 @@ def view_consultas(request):
                         pk=trat_prop_id, consulta=consulta, status=True).first()
 
                 costo = request.POST.get('costo', '')
-                abono = request.POST.get('abono', '')
+                abono = request.POST.get('abono', 0)
+                contabilizar_costo = True
+                tiene_mismo_tratamiento = VisitaTratamiento.objects.filter(status=True, consulta=consulta,
+                                                                           servicio=srv, tipo_servicio=srv.tipo).first()
+                if tiene_mismo_tratamiento:
+                    total_costo = tiene_mismo_tratamiento.costo
+                    total_abonado = (consulta.visitas.filter(status=True, servicio=srv, tipo_servicio=srv.tipo).aggregate(t=Sum('abono'))['t'] or 0)
+                    if Decimal(total_abonado) < Decimal(total_costo):
+                        contabilizar_costo = False
+                    saldo_restante = Decimal(total_costo) - Decimal(total_abonado)
+                    total_abonado_actual = Decimal(total_abonado) + Decimal(abono)
+                    if total_abonado_actual > Decimal(total_costo):
+                        mensaje = f"El total abonado supera el costo del tratamiento. Saldo restante del servicio {srv.nombre} ${saldo_restante}"
+                        return JsonResponse({'result': False,
+                                             'msg': mensaje})
+
                 visita = VisitaTratamiento.objects.create(
                     consulta              = consulta,
                     fecha                 = request.POST.get('fecha') or date.today(),
@@ -137,13 +154,16 @@ def view_consultas(request):
                     costo                 = float(costo) if costo else srv.precio,
                     abono                 = float(abono) if abono else 0,
                     forma_pago            = request.POST.get('forma_pago', ''),
+                    contabilizar_costo    = contabilizar_costo,
                     usuario_creacion      = request.user,
                 )
+                visita.registrar_historial()
                 # recalcular_totales() se llama en VisitaTratamiento.save()
                 monto = float(request.POST.get('abono', 0))
                 if monto > 0 and monto <= float(consulta.saldo):
                     AbonoConsulta.objects.create(
-                        consulta=consulta, monto=monto,
+                        consulta=consulta, servicio=srv, tipo_servicio=srv.tipo,
+                        monto=monto,
                         forma_pago=request.POST.get('forma_pago', 'Efectivo'),
                         nota=request.POST.get('nota', ''),
                         usuario_creacion=request.user)
@@ -238,6 +258,35 @@ def view_consultas(request):
             except Exception as ex:
                 return JsonResponse({'result': False, 'msg': str(ex)})
 
+        elif action == 'abonaradelanto':
+            try:
+                from apps.finanzas.models import CuentaPaciente, MovimientoFinanciero
+                consulta = get_object_or_404(Consulta,
+                    pk=request.POST.get('id'))
+                monto = float(request.POST.get('monto', 0))
+                if monto <= 0:
+                    return JsonResponse({'result': False, 'msg': 'Monto inválido'})
+                AbonoConsulta.objects.create(
+                    consulta=consulta, monto=monto,
+                    forma_pago=request.POST.get('forma_pago', 'Efectivo'),
+                    nota=request.POST.get('nota', ''),
+                    adelantado=True,
+                    usuario_creacion=request.user)
+                MovimientoFinanciero.objects.create(
+                    paciente=consulta.paciente, consulta=consulta,
+                    tipo='abonoadelantado', monto=monto,
+                    descripcion=f'Abono consulta por adelantado #{consulta.pk}',
+                    forma_pago=request.POST.get('forma_pago', 'Efectivo'),
+                    usuario_creacion=request.user)
+                cuenta, _ = CuentaPaciente.objects.get_or_create(
+                    paciente=consulta.paciente,
+                    defaults={'usuario_creacion': request.user})
+                cuenta.recalcular()
+                return JsonResponse({'result': True,
+                    'msg': f'Abono adelantado de ${monto:.2f} registrado'})
+            except Exception as ex:
+                return JsonResponse({'result': False, 'msg': str(ex)})
+
         elif action == 'delete':
             try:
                 obj = get_object_or_404(Consulta, pk=request.POST.get('id'))
@@ -249,7 +298,7 @@ def view_consultas(request):
 
     # ── GET ───────────────────────────────────────────────────────────────
     else:
-        action = request.GET.get('action', '')
+        data['action'] = action = request.GET.get('action', '')
 
         if action == 'nueva':
             from apps.servicios.models import Servicio, TipoServicio
@@ -274,6 +323,22 @@ def view_consultas(request):
             except Exception as ex:
                 return JsonResponse({'result': False, 'msg': str(ex)})
 
+
+        elif action == 'tiene_tratamiento_registrado':
+            try:
+                from apps.servicios.models import Servicio
+                consulta = get_object_or_404(Consulta, pk=request.GET.get('id'))
+                servicio = Servicio.objects.get(pk=request.GET.get('idservicio'))
+                tiene_mismo_tratamiento = VisitaTratamiento.objects.filter(
+                    status=True,
+                    consulta=consulta,
+                    servicio_id=servicio,
+                    tipo_servicio=servicio.tipo
+                ).exists()
+                return JsonResponse({'result': tiene_mismo_tratamiento})
+            except Exception as ex:
+                return JsonResponse({'result': False, 'msg': str(ex)})
+
         elif action == 'detalle':
             try:
                 con = get_object_or_404(Consulta, pk=request.GET.get('id'))
@@ -294,6 +359,15 @@ def view_consultas(request):
                 return JsonResponse({'result': False, 'msg': str(ex)})
 
         elif action == 'abonar':
+            try:
+                con = get_object_or_404(Consulta, pk=request.GET.get('id'))
+                data['con'] = con
+                tmpl = get_template('admin/consultas/modal/abonar.html')
+                return JsonResponse({'result': True, 'data': tmpl.render(data, request)})
+            except Exception as ex:
+                return JsonResponse({'result': False, 'msg': str(ex)})
+
+        elif action == 'abonaradelanto':
             try:
                 con = get_object_or_404(Consulta, pk=request.GET.get('id'))
                 data['con'] = con

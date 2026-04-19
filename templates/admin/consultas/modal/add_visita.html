@@ -1,157 +1,114 @@
 {# Modal: Registrar tratamiento realizado en una visita #}
-<form id="modalForm" action="/consultas/" onsubmit="return false">
-{% csrf_token %}
-<input type="hidden" name="action" value="add_visita">
-<input type="hidden" name="consulta_id" value="{{ consulta.pk }}">
 
-<p class="small text-muted mb-3">
-  <i class="bi bi-calendar-check me-1"></i>
-  Consulta del {{ consulta.fecha_creacion|date:"d/m/Y" }}
-  — {{ consulta.paciente.nombre_completo }}
-</p>
+<form id="modalForm" action="/consultas/" onsubmit="return false" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_visita">
+    <input type="hidden" name="consulta_id" value="{{ consulta.pk }}">
 
-{% if propuestos %}
-<div class="mb-3">
-  <label class="form-label small fw-600">Desde plan propuesto <span class="text-muted">(opcional)</span></label>
-  <div class="d-flex flex-wrap gap-1" id="chipsPropuestos">
-    {% for tp in propuestos %}
-    <button type="button"
-            class="btn btn-sm chip-propuesto"
-            style="background:var(--primary-lt);color:var(--primary-dk);border:none;font-size:.75rem"
-            data-servicio-id="{{ tp.servicio.pk }}"
-            data-servicio-nombre="{{ tp.servicio.nombre }}"
-            data-tipo-id="{{ tp.tipo_servicio.pk|default:'' }}"
-            data-costo="{{ tp.costo }}"
-            data-tp-id="{{ tp.pk }}"
-            onclick="seleccionarPropuesto(this)">
-      {{ tp.servicio.nombre }}
-      <span class="ms-1 opacity-75">${{ tp.costo }}</span>
-    </button>
-    {% endfor %}
-  </div>
-  <input type="hidden" name="tratamiento_propuesto_id" id="tpId" value="">
-  <div class="small text-muted mt-1">
-    Selecciona uno para pre-llenar los campos, o elige libremente abajo.
-  </div>
-</div>
-<hr class="my-2">
-{% endif %}
+    <p class="small text-muted mb-3">
+        <i class="bi bi-calendar-check me-1"></i>
+        Consulta del {{ consulta.fecha_creacion|date:"d/m/Y" }}
+        — {{ consulta.paciente.nombre_completo }}
+    </p>
 
-<div class="row g-2">
-  <div class="col-md-4">
-    <label class="form-label small fw-600">Fecha *</label>
-    <input type="date" name="fecha" id="visitaFecha"
-           class="form-control form-control-sm"
-           value="{{ hoy }}" required>
-  </div>
+    {% if propuestos %}
+        <div class="mb-3">
+            <label class="form-label small fw-semibold">
+                Desde plan propuesto <span class="text-muted">(opcional)</span>
+            </label>
+            <div class="d-flex flex-wrap gap-1" id="chipsPropuestos">
+                {% for tp in propuestos %}
+                    <button type="button"
+                            class="btn btn-sm chip-propuesto"
+                            style="background:var(--primary-lt);color:var(--primary-dk);border:none;font-size:.75rem"
+                            data-servicio-id="{{ tp.servicio.pk }}"
+                            data-costo="{{ tp.costo }}"
+                            data-tp-id="{{ tp.pk }}"
+                            onclick="seleccionarPropuesto(this)">
+                        {{ tp.servicio.nombre }}
+                        <span class="ms-1 opacity-75">${{ tp.costo }}</span>
+                    </button>
+                {% endfor %}
+            </div>
+            <input type="hidden" name="tratamiento_propuesto_id" id="tpId" value="">
+        </div>
+        <hr class="my-2">
+    {% endif %}
 
-  <div class="col-12">
-    <label class="form-label small fw-600">Servicio realizado *</label>
-    <select name="servicio_id" id="visitaServicio"
-            class="form-select form-select-sm" required
-            onchange="onServicioChange(this)">
-      <option value="">— Seleccionar —</option>
-      {% for tp in tipos_servicio %}
-        <optgroup label="{{ tp.nombre }}">
-          {% for s in servicios %}
-            {% if s.tipo == tp %}
-            <option value="{{ s.pk }}"
-                    data-precio="{{ s.precio }}"
-                    data-tipo-id="{{ s.tipo.pk|default:'' }}">
-              {{ s.nombre }} — ${{ s.precio }}
-            </option>
-            {% endif %}
-          {% endfor %}
-        </optgroup>
-      {% endfor %}
-      <optgroup label="Sin tipo">
-        {% for s in servicios %}{% if not s.tipo %}
-        <option value="{{ s.pk }}" data-precio="{{ s.precio }}" data-tipo-id="">
-          {{ s.nombre }} — ${{ s.precio }}
-        </option>
-        {% endif %}{% endfor %}
-      </optgroup>
-    </select>
-  </div>
+    <div class="row g-2">
+        <div class="col-md-4">
+            <label class="form-label small fw-semibold">Fecha *</label>
+            <input type="date" name="fecha" id="visitaFecha"
+                   class="form-control form-control-sm"
+                   value="{{ hoy }}" required>
+        </div>
 
-  <div class="col-md-4">
-    <label class="form-label small fw-600">Costo ($) *</label>
-    <input type="number" name="costo" id="visitaCosto"
-           class="form-control form-control-sm"
-           step="0.01" min="0" required>
-  </div>
+        <div class="col-12">
+            <label class="form-label small fw-semibold">Servicio realizado *</label>
+            <select name="servicio_id" id="visitaServicio"
+                    class="form-select form-select-sm" required
+                    onchange="onVisitaServicioChange(this)">
+                <option value="">— Seleccionar —</option>
+                {% for tp in tipos_servicio %}
+                    <optgroup label="{{ tp.nombre }}">
+                        {% for s in servicios %}
+                            {% if s.tipo == tp %}
+                                <option value="{{ s.pk }}" data-precio="{{ s.precio }}">
+                                    {{ s.nombre }} — ${{ s.precio }}
+                                </option>
+                            {% endif %}
+                        {% endfor %}
+                    </optgroup>
+                {% endfor %}
+            </select>
+        </div>
 
-  <div class="col-md-4">
-    <label class="form-label small fw-600">Abono ($) *</label>
-    <input type="number" name="abono" id="visitaAbono"
-           class="form-control form-control-sm"
-           step="0.01" min="0" required>
-  </div>
+        <div class="col-md-4" id="divVisitaCosto">
+            <label class="form-label small fw-semibold">Costo ($) *</label>
+            <input type="number" name="costo" id="visitaCosto"
+                   class="form-control form-control-sm"
+                   step="0.01" min="0" required>
+            <span id="msgMismoTratamiento" class="text-warning small d-none">
+    <i class="bi bi-exclamation-triangle me-1"></i>
+    Al pagar todo el tratamiento seleccionado, podrá ajustar nuevamente el costo.
+  </span>
+        </div>
 
-  <div class="col-md-4">
-    <label class="form-label small fw-600">Forma de pago</label>
-    <select name="forma_pago" class="form-select form-select-sm">
-      <option value="">— Pendiente —</option>
-      <option>Efectivo</option>
-      <option>Tarjeta</option>
-      <option>Transferencia</option>
-    </select>
-  </div>
+        <div class="col-md-4">
+            <label class="form-label small fw-semibold">Abono ($) *</label>
+            <input type="number" name="abono" id="visitaAbono"
+                   class="form-control form-control-sm"
+                   step="0.01" min="0" value="0" required>
+        </div>
 
-  <div class="col-12">
-    <label class="form-label small fw-600">Observaciones</label>
-    <textarea name="descripcion" class="form-control form-control-sm"
-              rows="2" placeholder="Notas sobre esta visita..."></textarea>
-  </div>
-</div>
+        <div class="col-md-4">
+            <label class="form-label small fw-semibold">Forma de pago</label>
+            <select name="forma_pago" class="form-select form-select-sm">
+                <option value="">— Pendiente —</option>
+                <option>Efectivo</option>
+                <option>Tarjeta</option>
+                <option>Transferencia</option>
+            </select>
+        </div>
 
-<div class="modal-footer px-0 pb-0 mt-3">
-  <button type="button" class="btn btn-outline-secondary btn-sm"
-          data-bs-dismiss="modal">Cancelar</button>
-  <button type="button" class="btn btn-primary btn-sm"
-          onclick="App.submit(document.getElementById('modalForm'), d => {
-            App.toast(d.msg);
-            bootstrap.Modal.getInstance(document.getElementById('mainModal'))?.hide();
-            // Recargar la sección de visitas de esta consulta
-            location.reload();
-          })">
-    <i class="bi bi-check2-circle me-1"></i>Registrar tratamiento
-  </button>
-</div>
+        <div class="col-12">
+            <label class="form-label small fw-semibold">Observaciones</label>
+            <textarea name="descripcion" class="form-control form-control-sm"
+                      rows="2"></textarea>
+        </div>
+    </div>
+
+    <div class="modal-footer px-0 pb-0 mt-3">
+        <button type="button" class="btn btn-outline-secondary btn-sm"
+                data-bs-dismiss="modal">Cancelar
+        </button>
+        <button type="button" class="btn btn-primary btn-sm"
+                onclick="App.submit(document.getElementById('modalForm'), d => {
+              App.toast(d.msg);
+              bootstrap.Modal.getInstance(document.getElementById('mainModal'))?.hide();
+              location.reload();
+            })">
+            Registrar tratamiento
+        </button>
+    </div>
 </form>
-
-<script>
-function seleccionarPropuesto(btn) {
-  // Des-seleccionar todos
-  document.querySelectorAll('.chip-propuesto').forEach(b =>
-    b.style.background = 'var(--primary-lt)');
-  btn.style.background = 'var(--primary)';
-  btn.style.color = '#fff';
-
-  // Pre-llenar campos
-  document.getElementById('tpId').value          = btn.dataset.tpId;
-  document.getElementById('visitaCosto').value    = btn.dataset.costo;
-  document.getElementById('visitaAbono').value    = btn.dataset.abono;
-
-  // Seleccionar servicio en el select
-  const sel = document.getElementById('visitaServicio');
-  for (let opt of sel.options) {
-    if (opt.value == btn.dataset.servicioId) {
-      opt.selected = true; break;
-    }
-  }
-}
-
-function onServicioChange(sel) {
-  const opt = sel.selectedOptions[0];
-  if (opt && opt.dataset.precio) {
-    document.getElementById('visitaCosto').value = opt.dataset.precio;
-  }
-  // Limpiar selección de propuesto si eligieron manualmente
-  document.getElementById('tpId').value = '';
-  document.querySelectorAll('.chip-propuesto').forEach(b => {
-    b.style.background = 'var(--primary-lt)';
-    b.style.color = 'var(--primary-dk)';
-  });
-}
-</script>

@@ -144,19 +144,22 @@
                                         <div class="flex-grow-1 small">
                                             <span class="fw-600">{{ c.motivo_consulta|truncatechars:55 }}</span>
                                             {% if c.diagnostico %}
-                                                <span class="text-muted ms-2">— {{ c.diagnostico|truncatechars:35 }}</span>{% endif %}
+                                                <span class="text-muted ms-2">— {{ c.diagnostico|truncatechars:35 }}</span>
+                                            {% endif %}
                                         </div>
                                         <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                                              <span class="badge" style="background:#e0e7ff;color:#4f46e5;font-size:.65rem">
-                                                {{ c.num_visitas }} visita(s)
-                                              </span>
+                                    <span class="badge"
+                                          style="background:#e0e7ff;color:#4f46e5;font-size:.65rem">
+                                        {{ c.num_visitas }} visita(s)
+                                    </span>
                                             <div class="text-end">
-                                                <div class="small fw-600">Total ${{ c.total|floatformat:2 }}</div>
+                                                <div class="small fw-600">Total ${{ c.get_total|floatformat:2 }}</div>
                                                 <div class="small fw-600 text-success">Abonado
-                                                    ${{ c.abono|floatformat:2 }}</div>
+                                                    ${{ c.get_total_abono|floatformat:2 }}</div>
                                                 {% if c.saldo > 0 %}
                                                     <div style="font-size:.88rem" class="text-danger">Saldo
-                                                        ${{ c.saldo|floatformat:2 }}</div>{% endif %}
+                                                        ${{ c.saldo|floatformat:2 }}</div>
+                                                {% endif %}
                                             </div>
                                             <span class="badge badge-{{ c.estado }}">{{ c.get_estado_display }}</span>
                                         </div>
@@ -167,126 +170,266 @@
                             <!-- Cuerpo expandido -->
                             <div id="con{{ c.pk }}"
                                  class="accordion-collapse collapse {% if forloop.first %}show{% endif %}">
-                                <div class="accordion-body pt-2 pb-3">
-                                    <div class="row g-3">
+                                <div class="accordion-body pt-0 pb-3 px-3">
 
-                                        <!-- Datos clínicos -->
-                                        <div class="col-lg-5">
-                                            {% if c.motivo_consulta %}
-                                                <div class="mb-2">
-                                                    <div class="small fw-700 text-muted">Motivo</div>
-                                                    <div class="small">{{ c.motivo_consulta }}</div>
-                                                </div>{% endif %}
-                                            {% if c.diagnostico %}
-                                                <div class="mb-2">
-                                                    <div class="small fw-700 text-muted">Diagnóstico</div>
-                                                    <div class="small">{{ c.diagnostico }}</div>
-                                                </div>{% endif %}
-                                            {% if c.observaciones %}
-                                                <div class="mb-2">
-                                                    <div class="small fw-700 text-muted">Observaciones</div>
-                                                    <div class="small">{{ c.observaciones }}</div>
-                                                </div>{% endif %}
+                                    <!-- ── Tabs nav ── -->
+                                    <ul class="nav nav-tabs nav-tabs-sm border-bottom mb-3"
+                                        id="tabs-{{ c.pk }}" role="tablist"
+                                        style="font-size:.8rem">
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link active px-3 py-2"
+                                                    id="tab-trat-{{ c.pk }}"
+                                                    data-bs-toggle="tab"
+                                                    data-bs-target="#pane-trat-{{ c.pk }}"
+                                                    type="button" role="tab">
+                                                <i class="bi bi-scissors me-1"></i>Tratamientos
+                                                <span class="badge rounded-pill ms-1"
+                                                      style="background:#e0e7ff;color:#4f46e5;font-size:.6rem">
+                                            {{ c.num_visitas }}
+                                        </span>
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link px-3 py-2"
+                                                    id="tab-abonos-{{ c.pk }}"
+                                                    data-bs-toggle="tab"
+                                                    data-bs-target="#pane-abonos-{{ c.pk }}"
+                                                    type="button" role="tab">
+                                                <i class="bi bi-cash-coin me-1"></i>Abonos
+                                                <span class="badge rounded-pill ms-1"
+                                                      style="background:#dcfce7;color:#16a34a;font-size:.6rem">
+                                            {{ c.get_abonos|length }}
+                                        </span>
+                                            </button>
+                                        </li>
+                                    </ul>
 
-                                            {% with props=c.get_tratamientos %}
-                                                {% if props %}
-                                                    <div class="mt-2 pt-2 border-top">
-                                                        <div class="small fw-700 text-muted mb-1">Plan propuesto</div>
-                                                        {% for t in props %}
-                                                            <div class="d-flex justify-content-between small text-muted mb-1">
-                                                                <span>{{ t.servicio.nombre }}</span>
-                                                                <span>${{ t.costo|floatformat:2 }}</span>
-                                                            </div>{% endfor %}
-                                                    </div>{% endif %}{% endwith %}
-                                        </div>
+                                    <!-- ── Tab panes ── -->
+                                    <div class="tab-content" id="tabContent-{{ c.pk }}">
 
-                                        <!-- Visitas realizadas -->
-                                        <div class="col-lg-7">
-                                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <div class="small fw-700" style="color:var(--primary)">
-                                                    <i class="bi bi-scissors me-1"></i>Tratamientos realizados
-                                                </div>
-                                                {% if c.estado == 'pendiente' %}
-                                                    <button class="btn btn-xs btn-primary"
-                                                            onclick="abrirModalVisita({{ c.pk }})">
-                                                        <i class="bi bi-plus-circle me-1"></i>Registrar visita
-                                                    </button>
-                                                {% endif %}
-                                            </div>
+                                        <!-- PANE: Tratamientos (contenido original) -->
+                                        <div class="tab-pane fade show active"
+                                             id="pane-trat-{{ c.pk }}" role="tabpanel">
+                                            <div class="row g-3">
 
-                                            <!-- Lista de visitas -->
-                                            <div id="visitas-{{ c.pk }}">
-                                                {% for v in c.get_visitas %}
-                                                    <div class="d-flex justify-content-between align-items-start py-2 border-bottom">
-                                                        <div>
-                                                            <div class="small fw-600">{{ v.servicio.nombre }}</div>
-                                                            <div class="d-flex gap-2 mt-1 flex-wrap">
-                                                                <span class="text-muted" style="font-size:.72rem"><i
-                                                                        class="bi bi-calendar me-1"></i>{{ v.fecha|date:"d/m/Y" }}</span>
-                                                                {% if v.tipo_servicio %}<span class="badge"
-                                                                                              style="background:{{ v.tipo_servicio.color }}22;color:{{ v.tipo_servicio.color }};font-size:.65rem">{{ v.tipo_servicio.nombre }}</span>{% endif %}
-                                                                {% if v.forma_pago %}
-                                                                    <span class="text-muted" style="font-size:.72rem"><i
-                                                                            class="bi bi-cash me-1"></i>{{ v.forma_pago }}</span>{% endif %}
-                                                            </div>
-                                                            {% if v.descripcion %}
-                                                                <div class="text-muted"
-                                                                     style="font-size:.72rem">{{ v.descripcion }}</div>{% endif %}
-                                                            {% if v.tratamiento_propuesto %}
-                                                                <div style="font-size:.68rem;color:var(--primary)"><i
-                                                                        class="bi bi-link me-1"></i>{{ v.tratamiento_propuesto.servicio.nombre }}
-                                                                </div>{% endif %}
+                                                <!-- Datos clínicos -->
+                                                <div class="col-lg-5">
+                                                    {% if c.motivo_consulta %}
+                                                        <div class="mb-2">
+                                                            <div class="small fw-700 text-muted">Motivo</div>
+                                                            <div class="small">{{ c.motivo_consulta }}</div>
                                                         </div>
-                                                        <div class="text-end ms-2 flex-shrink-0">
-                                                            <div class="fw-700 text-danger small">
-                                                                ${{ v.costo|floatformat:2 }}</div>
-                                                            <div class="fw-700 text-success small">
-                                                                Abona ${{ v.abono|floatformat:2 }}</div>
+                                                    {% endif %}
+                                                    {% if c.diagnostico %}
+                                                        <div class="mb-2">
+                                                            <div class="small fw-700 text-muted">Diagnóstico</div>
+                                                            <div class="small">{{ c.diagnostico }}</div>
+                                                        </div>
+                                                    {% endif %}
+                                                    {% if c.observaciones %}
+                                                        <div class="mb-2">
+                                                            <div class="small fw-700 text-muted">Observaciones</div>
+                                                            <div class="small">{{ c.observaciones }}</div>
+                                                        </div>
+                                                    {% endif %}
+
+                                                    {% with props=c.get_tratamientos %}
+                                                        {% if props %}
+                                                            <div class="mt-2 pt-2 border-top">
+                                                                <div class="small fw-700 text-muted mb-1">Plan
+                                                                    propuesto
+                                                                </div>
+                                                                {% for t in props %}
+                                                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                                                        <span>{{ t.servicio.nombre }}</span>
+                                                                        <span>${{ t.costo|floatformat:2 }}</span>
+                                                                    </div>
+                                                                {% endfor %}
+                                                            </div>
+                                                        {% endif %}
+                                                    {% endwith %}
+                                                </div>
+
+                                                <!-- Visitas realizadas -->
+                                                <div class="col-lg-7">
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <div class="small fw-700" style="color:var(--primary)">
+                                                            <i class="bi bi-scissors me-1"></i>Tratamientos realizados
+                                                        </div>
+                                                        {% if c.estado == 'pendiente' %}
+                                                            <button class="btn btn-xs btn-primary"
+                                                                    onclick="abrirModalVisita({{ c.pk }})">
+                                                                <i class="bi bi-plus-circle me-1"></i>Registrar visita
+                                                            </button>
+                                                        {% endif %}
+                                                    </div>
+
+                                                    <div id="visitas-{{ c.pk }}">
+                                                        {% for v in c.get_visitas %}
+                                                            <div class="d-flex justify-content-between align-items-start py-2 border-bottom">
+                                                                <div>
+                                                                    <div class="small fw-600">{{ v.servicio.nombre }}</div>
+                                                                    <div class="d-flex gap-2 mt-1 flex-wrap">
+                                                                <span class="text-muted" style="font-size:.72rem">
+                                                                    <i class="bi bi-calendar me-1"></i>{{ v.fecha|date:"d/m/Y" }}
+                                                                </span>
+                                                                        {% if v.tipo_servicio %}
+                                                                            <span class="badge"
+                                                                                  style="background:{{ v.tipo_servicio.color }}22;color:{{ v.tipo_servicio.color }};font-size:.65rem">
+                                                                        {{ v.tipo_servicio.nombre }}
+                                                                    </span>
+                                                                        {% endif %}
+                                                                        {% if v.forma_pago %}
+                                                                            <span class="text-muted"
+                                                                                  style="font-size:.72rem">
+                                                                        <i class="bi bi-cash me-1"></i>{{ v.forma_pago }}
+                                                                    </span>
+                                                                        {% endif %}
+                                                                    </div>
+                                                                    {% if v.descripcion %}
+                                                                        <div class="text-muted"
+                                                                             style="font-size:.72rem">{{ v.descripcion }}</div>
+                                                                    {% endif %}
+                                                                    {% if v.tratamiento_propuesto %}
+                                                                        <div style="font-size:.68rem;color:var(--primary)">
+                                                                            <i class="bi bi-link me-1"></i>{{ v.tratamiento_propuesto.servicio.nombre }}
+                                                                        </div>
+                                                                    {% endif %}
+                                                                </div>
+                                                                <div class="text-end ms-2 flex-shrink-0">
+                                                                    <div class="fw-700 text-danger small">
+                                                                        ${{ v.costo|floatformat:2 }}</div>
+                                                                    <div class="fw-700 text-success small">Abona
+                                                                        ${{ v.abono|floatformat:2 }}</div>
+                                                                    {% if c.estado == 'pendiente' %}
+                                                                        <button class="btn btn-xs btn-link text-danger p-0 mt-1"
+                                                                                onclick="eliminarVisita({{ v.pk }})">
+                                                                            <i class="bi bi-trash"
+                                                                               style="font-size:.75rem"></i>
+                                                                        </button>
+                                                                    {% endif %}
+                                                                </div>
+                                                            </div>
+                                                        {% empty %}
+                                                            <div class="text-muted small py-1">
+                                                                Sin visitas registradas.
+                                                                {% if c.estado == 'pendiente' %}
+                                                                    La deuda se generará al registrar la primera visita.
+                                                                {% endif %}
+                                                            </div>
+                                                        {% endfor %}
+                                                    </div>
+
+                                                    <!-- Totales + acciones -->
+                                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2 pt-2 border-top">
+                                                        <div class="d-flex gap-3 small">
+                                                            <span>Total: <strong>${{ c.total|floatformat:2 }}</strong></span>
+                                                            <span class="text-success">Pagado: <strong>${{ c.abono|floatformat:2 }}</strong></span>
+                                                            {% if c.saldo > 0 %}
+                                                                <span class="text-danger fw-700">Saldo: ${{ c.saldo|floatformat:2 }}</span>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="d-flex gap-1">
+                                                            <button class="btn btn-xs btn-success"
+                                                                    onclick="App.modal('/consultas/',{action:'abonaradelanto',id:{{ c.pk }}})">
+                                                                <i class="bi bi-cash me-1"></i>Abonar por adelantado
+                                                            </button>
+                                                            {% if c.saldo > 0 %}
+                                                                <button class="btn btn-xs btn-success"
+                                                                        onclick="App.modal('/consultas/',{action:'abonar',id:{{ c.pk }}})">
+                                                                    <i class="bi bi-cash me-1"></i>Abonar
+                                                                </button>
+                                                            {% endif %}
                                                             {% if c.estado == 'pendiente' %}
-                                                                <button class="btn btn-xs btn-link text-danger p-0 mt-1"
-                                                                        onclick="eliminarVisita({{ v.pk }})">
-                                                                    <i class="bi bi-trash" style="font-size:.75rem"></i>
+                                                                <button class="btn btn-xs btn-outline-danger fw-600"
+                                                                        onclick="finalizarConsulta({{ c.pk }})">
+                                                                    <i class="bi bi-check2-all me-1"></i>Finalizar
+                                                                    consulta
                                                                 </button>
                                                             {% endif %}
                                                         </div>
                                                     </div>
-                                                {% empty %}
-                                                    <div class="text-muted small py-1">
-                                                        Sin visitas registradas.
-                                                        {% if c.estado == 'pendiente' %}La deuda se generará alregistrar
-                                                            la primera visita.{% endif %}
+                                                </div>
+
+                                            </div>
+                                        </div><!-- /pane tratamientos -->
+
+                                        <!-- PANE: Abonos -->
+                                        <div class="tab-pane fade"
+                                             id="pane-abonos-{{ c.pk }}" role="tabpanel">
+
+                                            {% with abonos=c.get_abonos %}
+                                                {% if abonos %}
+                                                    <div class="table-responsive">
+                                                        <table class="table table-sm table-hover align-middle mb-2"
+                                                               style="font-size:.8rem">
+                                                            <thead>
+                                                            <tr class="text-muted">
+                                                                <th style="width:110px">Fecha</th>
+                                                                <th>Concepto</th>
+                                                                <th>Forma de pago</th>
+                                                                <th class="text-end">Monto</th>
+                                                            </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                            {% for a in abonos %}
+                                                                <tr>
+                                                                    <td class="text-muted">{{ a.fecha_creacion|date:"d/m/Y" }}</td>
+                                                                    <td>{{ a.concepto|default:"Abono" }}</td>
+                                                                    <td>
+                                                                        {% if a.forma_pago %}
+                                                                            <span class="badge"
+                                                                                  style="background:#f3f4f6;color:#374151;font-size:.65rem">
+                                                                    <i class="bi bi-cash me-1"></i>{{ a.forma_pago }}
+                                                                </span>
+                                                                        {% else %}
+                                                                            <span class="text-muted">—</span>
+                                                                        {% endif %}
+                                                                    </td>
+                                                                    <td class="text-end fw-700 text-success">
+                                                                        ${{ a.monto|floatformat:2 }}
+                                                                    </td>
+                                                                </tr>
+                                                            {% endfor %}
+                                                            </tbody>
+                                                            <tfoot class="border-top">
+                                                            <tr>
+                                                                <td colspan="3"
+                                                                    class="text-end fw-700 small text-muted">Total
+                                                                    abonado
+                                                                </td>
+                                                                <td class="text-end fw-700 text-success">
+                                                                    ${{ c.get_total_abono|floatformat:2 }}
+                                                                </td>
+                                                            </tr>
+                                                            {% if c.saldo > 0 %}
+                                                                <tr>
+                                                                    <td colspan="3"
+                                                                        class="text-end fw-700 small text-muted">Saldo
+                                                                        pendiente
+                                                                    </td>
+                                                                    <td class="text-end fw-700 text-danger">
+                                                                        ${{ c.saldo|floatformat:2 }}
+                                                                    </td>
+                                                                </tr>
+                                                            {% endif %}
+                                                            </tfoot>
+                                                        </table>
                                                     </div>
-                                                {% endfor %}
-                                            </div>
+                                                {% else %}
+                                                    <div class="text-center py-4 text-muted">
+                                                        <i class="bi bi-cash-coin fs-4 d-block mb-1 opacity-50"></i>
+                                                        <span class="small">Sin abonos registrados en esta consulta.</span>
+                                                    </div>
+                                                {% endif %}
+                                            {% endwith %}
 
-                                            <!-- Totales + acciones -->
-                                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2 pt-2 border-top">
-                                                <div class="d-flex gap-3 small">
-                                                    <span>Total: <strong>${{ c.total|floatformat:2 }}</strong></span>
-                                                    <span class="text-success">Pagado: <strong>${{ c.abono|floatformat:2 }}</strong></span>
-                                                    {% if c.saldo > 0 %}
-                                                        <span class="text-danger fw-700">Saldo: ${{ c.saldo|floatformat:2 }}</span>{% endif %}
-                                                </div>
-                                                <div class="d-flex gap-1">
-                                                    {% if c.saldo > 0 %}
-                                                        <button class="btn btn-xs btn-success"
-                                                                onclick="App.modal('/consultas/',{action:'abonar',id:{{ c.pk }}})">
-                                                            <i class="bi bi-cash me-1"></i>Abonar
-                                                        </button>
-                                                    {% endif %}
-                                                    {% if c.estado == 'pendiente' %}
-                                                        <button class="btn btn-xs btn-outline-danger fw-600"
-                                                                onclick="finalizarConsulta({{ c.pk }})">
-                                                            <i class="bi bi-check2-all me-1"></i>Finalizar consulta
-                                                        </button>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                        </div>
+                                        </div><!-- /pane abonos -->
 
-                                    </div>
+                                    </div><!-- /tab-content -->
                                 </div>
                             </div>
+
                         </div>
                     {% endfor %}
                 </div>
@@ -610,6 +753,77 @@
                 App.toast('Consulta finalizada', 'success');
                 location.reload();
             } else App.toast(d.msg, 'danger');
+        }
+
+        function seleccionarPropuesto(btn) {
+            const chips = document.querySelectorAll('.chip-propuesto');
+            const inputTpId = document.getElementById('tpId');
+            const inputCosto = document.getElementById('visitaCosto');
+            const selServicio = document.getElementById('visitaServicio');
+            const yaSeleccionado = btn.dataset.tpId === inputTpId.value;
+
+            chips.forEach(b => {
+                b.style.background = 'var(--primary-lt)';
+                b.style.color = 'var(--primary-dk)';
+            });
+
+            if (yaSeleccionado) {
+                inputTpId.value = '';
+                inputCosto.value = '';
+                selServicio.value = '';
+                return;
+            }
+
+            btn.style.background = 'var(--primary)';
+            btn.style.color = '#fff';
+            inputTpId.value = btn.dataset.tpId;
+            inputCosto.value = btn.dataset.costo;
+
+            for (const opt of selServicio.options) {
+                if (opt.value === btn.dataset.servicioId) {
+                    opt.selected = true;
+                    break;
+                }
+            }
+        }
+
+        function onVisitaServicioChange(sel) {
+            const inputCosto = document.getElementById('visitaCosto');
+            const inputTpId = document.getElementById('tpId');
+
+            // Limpiar chip activo
+            inputTpId.value = '';
+            document.querySelectorAll('.chip-propuesto').forEach(b => {
+                b.style.background = 'var(--primary-lt)';
+                b.style.color = 'var(--primary-dk)';
+            });
+
+            if (!sel.value) {
+                inputCosto.value = '';
+                inputCosto.readOnly = false;
+                inputCosto.classList.remove('bg-light');
+                return;
+            }
+
+            // Poner el precio del option seleccionado inmediatamente
+            const precio = sel.selectedOptions[0]?.dataset.precio ?? '';
+            inputCosto.value = precio;
+
+            const consultaId = document.querySelector('[name="consulta_id"]').value;
+
+            // Resetear antes del fetch
+            inputCosto.readOnly = false;
+            inputCosto.classList.remove('bg-light');
+            document.getElementById('msgMismoTratamiento').classList.add('d-none');
+
+            fetch(`/consultas/?action=tiene_tratamiento_registrado&idservicio=${sel.value}&id=${consultaId}`)
+                .then(r => r.json())
+                .then(d => {
+                    inputCosto.readOnly = d.result;
+                    inputCosto.classList.toggle('bg-light', d.result);
+                    document.getElementById('msgMismoTratamiento').classList.toggle('d-none', !d.result);
+                })
+                .catch(err => console.error('onVisitaServicioChange:', err));
         }
     </script>
 {% endblock %}

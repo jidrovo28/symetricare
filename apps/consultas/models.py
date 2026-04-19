@@ -46,7 +46,7 @@ class Consulta(ModeloBase):
         Se llama automáticamente en save()/delete() de ambos modelos.
         """
         from django.db.models import Sum
-        subtotal = (self.visitas.filter(status=True)
+        subtotal = (self.visitas.filter(status=True, contabilizar_costo=True)
                     .aggregate(t=Sum('costo'))['t'] or 0)
         abono    = (self.abonos.filter(status=True)
                     .aggregate(t=Sum('monto'))['t'] or 0)
@@ -68,6 +68,19 @@ class Consulta(ModeloBase):
 
     def get_visitas(self):
         return self.visitas.filter(status=True)
+
+    def get_total(self):
+        from django.db.models import Sum
+        return (self.visitas.filter(status=True, contabilizar_costo=True)
+         .aggregate(t=Sum('costo'))['t'] or 0)
+
+    def get_total_abono(self):
+        from django.db.models import Sum
+        return (self.abonos.filter(status=True)
+         .aggregate(t=Sum('monto'))['t'] or 0)
+
+    def get_abonos(self):
+        return self.abonos.filter(status=True).order_by('-id')
 
 
 class TratamientoPropuesto(ModeloBase):
@@ -112,6 +125,7 @@ class VisitaTratamiento(ModeloBase):
     costo                 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     abono                 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     forma_pago            = models.CharField(max_length=50, blank=True)
+    contabilizar_costo    = models.BooleanField(default=True, blank=True, null=True)
 
     class Meta:
         ordering = ['-fecha', '-fecha_creacion']
@@ -128,19 +142,42 @@ class VisitaTratamiento(ModeloBase):
         super().save(*args, **kwargs)
         self.consulta.recalcular_totales()
 
+    def registrar_historial(self):
+        historial = HistorialAbonoVisitaTratamiento(visita=self,
+                                                    monto=self.abono,
+                                                    forma_pago=self.forma_pago)
+        historial.save()
+
     def delete(self, *args, **kwargs):
         consulta = self.consulta   # guardar ref antes de borrar
         super().delete(*args, **kwargs)
         consulta.recalcular_totales()
 
+class HistorialAbonoVisitaTratamiento(ModeloBase):
+    """Pagos parciales del paciente."""
+    visita   = models.ForeignKey(VisitaTratamiento, on_delete=models.CASCADE, related_name='historialabonovisita', blank=True, null=True)
+    monto      = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    forma_pago = models.CharField(max_length=50, default='Efectivo', blank=True, null=True)
+    nota       = models.CharField(max_length=200, blank=True, null=True)
+
+    class Meta:
+        ordering = ['-fecha_creacion']
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
 
 class AbonoConsulta(ModeloBase):
     """Pagos parciales del paciente."""
     consulta   = models.ForeignKey(Consulta, on_delete=models.CASCADE,
-                   related_name='abonos')
+                   related_name='abonos', null=True, blank=True)
+    servicio = models.ForeignKey('servicios.Servicio',
+                                 on_delete=models.PROTECT, null=True, blank=True)
+    tipo_servicio = models.ForeignKey('servicios.TipoServicio',
+                                      null=True, blank=True, on_delete=models.SET_NULL)
     monto      = models.DecimalField(max_digits=10, decimal_places=2)
     forma_pago = models.CharField(max_length=50, default='Efectivo')
     nota       = models.CharField(max_length=200, blank=True)
+    adelantado = models.BooleanField(default=False, blank=True, null=True)
 
     class Meta:
         ordering = ['-fecha_creacion']
@@ -153,3 +190,9 @@ class AbonoConsulta(ModeloBase):
         consulta = self.consulta
         super().delete(*args, **kwargs)
         consulta.recalcular_totales()
+
+    def concepto(self):
+        concepto = f"Abono"
+        if self.adelantado:
+            concepto = f"Abono adelantado"
+        return concepto

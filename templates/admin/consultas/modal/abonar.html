@@ -1,5 +1,5 @@
 <form id="modalForm" action="/consultas/" onsubmit="return false">{% csrf_token %}
-<input type="hidden" name="action" value="abonar">
+<input type="hidden" name="action" value="{{ action }}">
 <input type="hidden" name="id" value="{{ con.pk }}">
 <div class="mb-3 p-3 rounded" style="background:#f9fafb">
   <div class="d-flex justify-content-between"><span class="small">Total consulta:</span><span class="fw-600">${{ con.total|floatformat:2 }}</span></div>

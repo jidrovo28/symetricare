@@ -44,13 +44,14 @@ class MovimientoFinanciero(ModeloBase):
     """Cada pago o cargo registrado."""
     COBRO   = 'cobro'
     ABONO   = 'abono'
-    TIPO_CHOICES = [(COBRO,'Cobro'),(ABONO,'Abono')]
+    ABONOADELANTADO   = 'abonoadelantado'
+    TIPO_CHOICES = [(COBRO,'Cobro'),(ABONO,'Abono'), (ABONOADELANTADO, 'Abono Adelantado')]
 
     paciente  = models.ForeignKey('pacientes.Paciente', on_delete=models.PROTECT,
                  related_name='movimientos')
     consulta  = models.ForeignKey('consultas.Consulta', null=True, blank=True,
                  on_delete=models.SET_NULL, related_name='movimientos')
-    tipo      = models.CharField(max_length=10, choices=TIPO_CHOICES)
+    tipo      = models.CharField(max_length=20, choices=TIPO_CHOICES, blank=True, null=True)
     monto     = models.DecimalField(max_digits=10, decimal_places=2)
     descripcion = models.CharField(max_length=300, blank=True)
     forma_pago  = models.CharField(max_length=50, default='Efectivo',
