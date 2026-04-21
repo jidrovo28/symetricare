@@ -1,7 +1,7 @@
 <div class="mb-3">
   <strong>{{ cuenta.paciente.nombre_completo }}</strong>
   <div class="row g-2 mt-1">
-    <div class="col-4 text-center"><div class="fw-700">${{ cuenta.total_cobrado|floatformat:2 }}</div><div class="small text-muted">Cobrado</div></div>
+    <div class="col-4 text-center"><div class="fw-700">${{ cuenta.total_cobrado|floatformat:2 }}</div><div class="small text-muted">Generado</div></div>
     <div class="col-4 text-center"><div class="fw-700 text-success">${{ cuenta.total_pagado|floatformat:2 }}</div><div class="small text-muted">Pagado</div></div>
     <div class="col-4 text-center"><div class="fw-700 text-danger">${{ cuenta.saldo|floatformat:2 }}</div><div class="small text-muted">Saldo</div></div>
   </div>
