@@ -258,6 +258,24 @@ def view_consultas(request):
             except Exception as ex:
                 return JsonResponse({'result': False, 'msg': str(ex)})
 
+        elif action == 'actualizar_finanzas':
+            try:
+                from apps.pacientes.models import Paciente
+                from apps.finanzas.models import MovimientoFinanciero, CuentaPaciente
+                pacientes = Paciente.objects.filter(status=True)
+                for paciente_ in pacientes:
+                    consultas = Consulta.objects.filter(status=True, paciente=paciente_)
+                    for consulta in consultas:
+                        consulta.recalcular_totales()
+                        consulta.refresh_from_db(fields=['total', 'abono', 'saldo'])
+                    cuentas = CuentaPaciente.objects.filter(status=True, paciente=paciente_)
+                    for cuenta_ in cuentas:
+                        cuenta_.recalcular()
+                return JsonResponse({'result': True,
+                    'msg': 'Estados financieros actualizados.'})
+            except Exception as ex:
+                return JsonResponse({'result': False, 'msg': str(ex)})
+
         # ── Registrar abono ───────────────────────────────────────────────
         elif action == 'abonar':
             try:
