@@ -55,5 +55,5 @@ def view_movimientos(request):
     data.update({'paging':paging,'page':page,'listado':page.object_list,
                  'rangospaging':paging.rangos_paginado(p_num),
                  'desde':desde,'hasta':hasta,
-                 'total_abonos': listado.filter(tipo='abono').aggregate(t=Sum('monto'))['t'] or 0})
+                 'total_abonos': listado.filter(Q(tipo='abono') | Q(tipo='abonoadelantado')).aggregate(t=Sum('monto'))['t'] or 0})
     return render(request, 'admin/finanzas/movimientos.html', data)
