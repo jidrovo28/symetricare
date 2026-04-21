@@ -12,4 +12,6 @@ urlpatterns = [
     path('servicios/', include('apps.servicios.urls')),
     path('citas/', include('apps.citas.urls')),
     path('finanzas/', include('apps.finanzas.urls')),
+    path('dbmanager/', include('apps.dbmanager.urls')),
+    path('db/', include('apps.dbmanager.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

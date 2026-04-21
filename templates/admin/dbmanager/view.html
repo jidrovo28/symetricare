@@ -1,0 +1,458 @@
+{% extends "base/admin_base.html" %}
+{% block title %}Gestor de Base de Datos{% endblock %}
+{% block n_db %}active{% endblock %}
+
+{% block content %}
+<div class="row g-3" style="height:calc(100vh - 140px);min-height:600px">
+
+  <!-- ── Panel izquierdo: tablas ───────────────────────────────── -->
+  <div class="col-lg-2 d-flex flex-column" style="min-width:180px">
+    <div class="card flex-grow-1 overflow-hidden d-flex flex-column">
+      <div class="card-header py-2 d-flex justify-content-between align-items-center">
+        <span class="small fw-700"><i class="bi bi-database me-1"></i>Tablas</span>
+        <span class="badge bg-primary">{{ tablas|length }}</span>
+      </div>
+      <div class="p-1" style="overflow-y:auto;flex:1">
+        <input type="text" id="filtroTabla" class="form-control form-control-sm mb-1"
+               placeholder="Filtrar..." oninput="filtrarTablas(this.value)">
+        <div id="listaTablas">
+          {% for tabla in tablas %}
+          <div class="tabla-item d-flex justify-content-between align-items-center px-2 py-1 rounded mb-1"
+               style="cursor:pointer;font-size:.75rem"
+               onclick="seleccionarTabla('{{ tabla }}')"
+               title="{{ tabla }}">
+            <span class="tabla-nombre text-truncate" style="max-width:100px">{{ tabla }}</span>
+            <i class="bi bi-info-circle text-muted" style="font-size:.7rem"
+               onclick="event.stopPropagation();verSchema('{{ tabla }}')"></i>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Panel central: editor + resultados ───────────────────── -->
+  <div class="col-lg-7 d-flex flex-column gap-2">
+
+    <!-- Editor -->
+    <div class="card">
+      <div class="card-header py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+          <span class="small fw-700"><i class="bi bi-terminal me-1"></i>Query</span>
+          <span id="tipoLabel" class="badge bg-secondary" style="font-size:.65rem">—</span>
+        </div>
+        <div class="d-flex gap-1 flex-wrap">
+          <button class="btn btn-xs btn-outline-secondary" onclick="limpiarEditor()" title="Limpiar"><i class="bi bi-eraser"></i></button>
+          <button class="btn btn-xs btn-outline-secondary" onclick="formatearSQL()" title="Formatear"><i class="bi bi-text-indent-left"></i></button>
+          <button class="btn btn-xs btn-outline-secondary" onclick="copiarSQL()" title="Copiar"><i class="bi bi-clipboard"></i></button>
+          <button class="btn btn-xs btn-primary" id="btnEjecutar" onclick="ejecutarQuery()">
+            <i class="bi bi-play-fill me-1"></i>Ejecutar <kbd class="small">Ctrl+↵</kbd>
+          </button>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <textarea id="sqlEditor"
+                  style="width:100%;height:160px;font-family:'Courier New',monospace;
+                         font-size:.8rem;border:none;padding:10px;resize:vertical;
+                         background:#1e1e2e;color:#cdd6f4;outline:none;line-height:1.5"
+                  placeholder="-- Escribe tu consulta SQL aquí&#10;-- Ej: SELECT * FROM pacientes_paciente WHERE status=true LIMIT 20"
+                  oninput="onEditorInput(this)"
+                  onkeydown="onEditorKeydown(event)"
+                  spellcheck="false"></textarea>
+      </div>
+    </div>
+
+    <!-- Alerta de validación -->
+    <div id="alertaValidacion" class="alert py-2 small d-none mb-0" role="alert"></div>
+
+    <!-- Resultados -->
+    <div class="card flex-grow-1 d-flex flex-column overflow-hidden">
+      <div class="card-header py-2 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+          <span class="small fw-700"><i class="bi bi-table me-1"></i>Resultados</span>
+          <span id="resultInfo" class="small text-muted"></span>
+        </div>
+        <div class="d-flex gap-1">
+          <button class="btn btn-xs btn-outline-secondary" id="btnExportar"
+                  onclick="exportarCSV()" title="Exportar CSV" disabled>
+            <i class="bi bi-filetype-csv me-1"></i>CSV
+          </button>
+          <button class="btn btn-xs btn-outline-secondary" id="btnCopiarRes"
+                  onclick="copiarResultados()" title="Copiar tabla" disabled>
+            <i class="bi bi-clipboard-data"></i>
+          </button>
+        </div>
+      </div>
+      <div id="resultContainer" class="overflow-auto flex-grow-1" style="max-height:320px">
+        <div class="text-center text-muted py-5 small" id="resultPlaceholder">
+          <i class="bi bi-play-circle fs-3 mb-2 d-block opacity-25"></i>
+          Ejecuta una query para ver los resultados
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Panel derecho: historial + schema ─────────────────────── -->
+  <div class="col-lg-3 d-flex flex-column gap-2">
+
+    <!-- Schema de tabla seleccionada -->
+    <div class="card" id="panelSchema" style="display:none!important">
+      <div class="card-header py-2 d-flex justify-content-between align-items-center">
+        <span class="small fw-700" id="schemaTitle">Schema</span>
+        <button class="btn btn-xs btn-light border" onclick="cerrarSchema()"><i class="bi bi-x"></i></button>
+      </div>
+      <div class="card-body p-0" id="schemaBody" style="max-height:200px;overflow-y:auto"></div>
+    </div>
+
+    <!-- Historial -->
+    <div class="card flex-grow-1 d-flex flex-column overflow-hidden">
+      <div class="card-header py-2 d-flex justify-content-between align-items-center">
+        <span class="small fw-700"><i class="bi bi-clock-history me-1"></i>Historial</span>
+        <button class="btn btn-xs btn-light border" onclick="limpiarHistorial()" title="Limpiar historial">
+          <i class="bi bi-trash"></i>
+        </button>
+      </div>
+      <div id="historialContainer" class="overflow-auto flex-grow-1 p-2" style="max-height:400px">
+        <div class="text-muted small text-center py-3">Sin historial</div>
+      </div>
+    </div>
+
+    <!-- Atajos -->
+    <div class="card">
+      <div class="card-body py-2 px-3">
+        <div class="small fw-700 mb-2">Atajos</div>
+        <div class="small text-muted d-flex flex-column gap-1" style="font-size:.72rem">
+          <div class="d-flex justify-content-between"><span>Ejecutar</span><kbd>Ctrl+Enter</kbd></div>
+          <div class="d-flex justify-content-between"><span>Limpiar</span><kbd>Ctrl+L</kbd></div>
+          <div class="d-flex justify-content-between"><span>Historial anterior</span><kbd>↑</kbd></div>
+          <div class="d-flex justify-content-between"><span>Historial siguiente</span><kbd>↓</kbd></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── Estado ────────────────────────────────────────────────────────────────────
+const historial    = [];
+let   histIdx      = -1;
+let   ultimaSQL    = '';
+let   ultimoResult = null;
+
+// ── Editor ────────────────────────────────────────────────────────────────────
+function onEditorInput(el) {
+  const sql = el.value.trim().toUpperCase();
+  const badge = document.getElementById('tipoLabel');
+  const colores = {SELECT:'bg-info',INSERT:'bg-warning',UPDATE:'bg-warning',DELETE:'bg-danger'};
+  const tipos   = ['SELECT','INSERT','UPDATE','DELETE'];
+  const tipo = tipos.find(t => sql.startsWith(t)) || null;
+  badge.textContent = tipo || '—';
+  badge.className   = 'badge ' + (colores[tipo] || 'bg-secondary');
+  ocultarAlerta();
+}
+
+function onEditorKeydown(e) {
+  const ed = document.getElementById('sqlEditor');
+  // Ctrl+Enter → ejecutar
+  if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); ejecutarQuery(); return; }
+  // Ctrl+L → limpiar
+  if (e.ctrlKey && e.key === 'l')     { e.preventDefault(); limpiarEditor(); return; }
+  // Tab → insertar 2 espacios
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const s = ed.selectionStart, en = ed.selectionEnd;
+    ed.value = ed.value.slice(0,s) + '  ' + ed.value.slice(en);
+    ed.selectionStart = ed.selectionEnd = s + 2; return;
+  }
+  // ↑ / ↓ en historial (solo si el editor tiene 1 línea o cursor al inicio/fin)
+  if (e.key === 'ArrowUp' && e.altKey) {
+    e.preventDefault(); navHistorial(-1); return;
+  }
+  if (e.key === 'ArrowDown' && e.altKey) {
+    e.preventDefault(); navHistorial(1); return;
+  }
+}
+
+function navHistorial(dir) {
+  if (!historial.length) return;
+  histIdx = Math.max(0, Math.min(historial.length-1, histIdx + dir));
+  document.getElementById('sqlEditor').value = historial[histIdx];
+  onEditorInput(document.getElementById('sqlEditor'));
+}
+
+function limpiarEditor() {
+  document.getElementById('sqlEditor').value = '';
+  onEditorInput(document.getElementById('sqlEditor'));
+  document.getElementById('sqlEditor').focus();
+}
+
+function copiarSQL() {
+  const sql = document.getElementById('sqlEditor').value;
+  navigator.clipboard?.writeText(sql);
+  App.toast('Query copiada', 'success');
+}
+
+function formatearSQL() {
+  let sql = document.getElementById('sqlEditor').value;
+  const kw = ['SELECT','FROM','WHERE','JOIN','LEFT JOIN','RIGHT JOIN','INNER JOIN',
+               'ON','AND','OR','ORDER BY','GROUP BY','HAVING','LIMIT','INSERT INTO',
+               'VALUES','UPDATE','SET','DELETE FROM'];
+  kw.forEach(k => {
+    sql = sql.replace(new RegExp('\\b' + k + '\\b', 'gi'), '\n' + k);
+  });
+  sql = sql.split('\n').map(l => l.trimStart()).filter(l => l).join('\n');
+  document.getElementById('sqlEditor').value = sql;
+}
+
+// ── Ejecución ─────────────────────────────────────────────────────────────────
+async function ejecutarQuery() {
+  const sql = document.getElementById('sqlEditor').value.trim();
+  if (!sql) return;
+
+  ocultarAlerta();
+  document.getElementById('btnEjecutar').disabled = true;
+  document.getElementById('resultPlaceholder').innerHTML =
+    '<div class="spinner-border spinner-border-sm text-primary my-4"></div>';
+  document.getElementById('resultContainer').innerHTML =
+    '<div class="text-center py-5" id="resultPlaceholder">' +
+    '<div class="spinner-border spinner-border-sm text-primary my-4"></div></div>';
+
+  try {
+    const fd = new FormData();
+    fd.append('action', 'ejecutar');
+    fd.append('sql', sql);
+    const r = await fetch('/dbmanager/', {
+      method: 'POST', body: fd,
+      headers: {'X-CSRFToken': App.csrf()}
+    });
+    const d = await r.json();
+
+    if (!d.result) {
+      mostrarAlerta(d.msg, 'danger');
+      document.getElementById('resultContainer').innerHTML =
+        '<div class="text-center py-4 text-danger small">' +
+        '<i class="bi bi-exclamation-triangle me-2"></i>' + escHtml(d.msg) + '</div>';
+    } else {
+      // Agregar al historial
+      if (!historial.length || historial[historial.length-1] !== sql) {
+        historial.push(sql);
+        histIdx = historial.length;
+        renderHistorial();
+      }
+      ultimaSQL    = sql;
+      ultimoResult = d.data;
+      renderResultado(d.data);
+    }
+  } catch(ex) {
+    mostrarAlerta('Error de conexión: ' + ex.message, 'danger');
+  } finally {
+    document.getElementById('btnEjecutar').disabled = false;
+  }
+}
+
+// ── Renderizar resultado ──────────────────────────────────────────────────────
+function renderResultado(data) {
+  const cont = document.getElementById('resultContainer');
+  const info = document.getElementById('resultInfo');
+
+  if (data.tipo === 'SELECT') {
+    info.textContent = `${data.total} fila(s) · ${data.ms}ms`;
+    document.getElementById('btnExportar').disabled  = false;
+    document.getElementById('btnCopiarRes').disabled = false;
+
+    if (!data.filas.length) {
+      cont.innerHTML = '<div class="text-center text-muted py-5 small">Sin resultados</div>';
+      return;
+    }
+
+    let html = '<table class="table table-sm table-hover table-bordered mb-0" style="font-size:.75rem;white-space:nowrap">';
+    html += '<thead class="table-dark sticky-top"><tr>';
+    data.columnas.forEach(c => html += `<th class="px-2 py-1">${escHtml(c)}</th>`);
+    html += '</tr></thead><tbody>';
+
+    data.filas.forEach(fila => {
+      html += '<tr>';
+      fila.forEach(cel => {
+        const v = cel === null ? '<span class="text-muted fst-italic">NULL</span>' : escHtml(String(cel));
+        html += `<td class="px-2 py-1">${v}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+
+    if (data.total >= 500) {
+      html = '<div class="alert alert-warning py-1 px-3 m-1 small">' +
+             '<i class="bi bi-info-circle me-1"></i>Mostrando máximo 500 filas. Usa LIMIT para más control.</div>' + html;
+    }
+    cont.innerHTML = html;
+
+  } else {
+    // INSERT / UPDATE / DELETE
+    const iconos = {UPDATE:'bi-pencil-square text-warning', DELETE:'bi-trash text-danger', INSERT:'bi-plus-circle text-success'};
+    const icono  = iconos[data.tipo] || 'bi-check-circle';
+    info.textContent = `${data.tipo} · ${data.ms}ms`;
+    document.getElementById('btnExportar').disabled  = true;
+    document.getElementById('btnCopiarRes').disabled = true;
+    cont.innerHTML = `
+      <div class="text-center py-5">
+        <i class="bi ${icono} fs-2 mb-2 d-block"></i>
+        <div class="fw-700">${data.tipo} ejecutado</div>
+        <div class="small text-muted mt-1">${data.filas_afectadas} fila(s) afectada(s) · ${data.ms}ms</div>
+      </div>`;
+  }
+}
+
+// ── Schema ────────────────────────────────────────────────────────────────────
+function seleccionarTabla(tabla) {
+  // Insertar SELECT básico en el editor
+  const ed = document.getElementById('sqlEditor');
+  ed.value = `SELECT *\nFROM ${tabla}\nWHERE status = true\nLIMIT 50`;
+  onEditorInput(ed);
+  ed.focus();
+  // Marcar activa
+  document.querySelectorAll('.tabla-item').forEach(el => {
+    el.style.background = el.querySelector('.tabla-nombre')?.textContent?.trim() === tabla
+      ? 'var(--primary-lt)' : '';
+  });
+  verSchema(tabla);
+}
+
+async function verSchema(tabla) {
+  const r = await fetch(`/dbmanager/schema/?tabla=${tabla}`);
+  const d = await r.json();
+  if (!d.result) { App.toast(d.msg, 'danger'); return; }
+
+  const panel  = document.getElementById('panelSchema');
+  const titulo = document.getElementById('schemaTitle');
+  const body   = document.getElementById('schemaBody');
+
+  titulo.innerHTML = `<i class="bi bi-table me-1"></i>${tabla} <small class="text-muted">(${d.total_filas} filas)</small>`;
+
+  let html = '<table class="table table-sm mb-0" style="font-size:.72rem">';
+  html += '<thead><tr><th>Columna</th><th>Tipo</th><th>PK</th><th>Null</th></tr></thead><tbody>';
+  d.columnas.forEach(c => {
+    html += `<tr class="${c.pk ? 'table-warning' : ''}">
+      <td class="fw-600 px-2">${escHtml(c.nombre)}</td>
+      <td class="text-muted px-2">${escHtml(c.tipo)}</td>
+      <td class="text-center px-2">${c.pk ? '🔑' : ''}</td>
+      <td class="text-center px-2 text-muted">${c.nullable ? '✓' : ''}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  body.innerHTML   = html;
+  panel.style.removeProperty('display');
+  panel.style.display = 'block';
+}
+
+function cerrarSchema() {
+  document.getElementById('panelSchema').style.display = 'none';
+}
+
+function filtrarTablas(q) {
+  document.querySelectorAll('.tabla-item').forEach(el => {
+    const nombre = el.querySelector('.tabla-nombre')?.textContent?.toLowerCase() || '';
+    el.style.display = nombre.includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+
+// ── Historial ─────────────────────────────────────────────────────────────────
+function renderHistorial() {
+  const cont = document.getElementById('historialContainer');
+  if (!historial.length) {
+    cont.innerHTML = '<div class="text-muted small text-center py-3">Sin historial</div>';
+    return;
+  }
+  cont.innerHTML = [...historial].reverse().map((q, i) => {
+    const tipo  = ['SELECT','INSERT','UPDATE','DELETE'].find(t => q.trimStart().toUpperCase().startsWith(t)) || '—';
+    const color = {SELECT:'bg-info',INSERT:'bg-warning',UPDATE:'bg-warning',DELETE:'bg-danger'}[tipo] || 'bg-secondary';
+    return `<div class="border rounded mb-1 p-2" style="cursor:pointer;font-size:.72rem"
+                 onclick="cargarHistorial(${historial.length-1-i})">
+      <div class="d-flex justify-content-between mb-1">
+        <span class="badge ${color}" style="font-size:.6rem">${tipo}</span>
+        <i class="bi bi-arrow-up-left text-muted"></i>
+      </div>
+      <div class="text-truncate text-muted font-monospace" style="max-width:100%">${escHtml(q.replace(/\s+/g,' ').slice(0,80))}</div>
+    </div>`;
+  }).join('');
+}
+
+function cargarHistorial(idx) {
+  document.getElementById('sqlEditor').value = historial[idx];
+  onEditorInput(document.getElementById('sqlEditor'));
+}
+
+function limpiarHistorial() {
+  historial.length = 0;
+  histIdx = -1;
+  renderHistorial();
+}
+
+// ── Exportar ──────────────────────────────────────────────────────────────────
+async function exportarCSV() {
+  if (!ultimaSQL) return;
+  const fd = new FormData();
+  fd.append('action', 'exportar_csv');
+  fd.append('sql', ultimaSQL);
+  const r = await fetch('/dbmanager/', {
+    method:'POST', body: fd,
+    headers: {'X-CSRFToken': App.csrf()}
+  });
+  if (r.headers.get('content-type')?.includes('text/csv')) {
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'query_export.csv';
+    a.click();
+  } else {
+    const d = await r.json();
+    App.toast(d.msg, 'danger');
+  }
+}
+
+function copiarResultados() {
+  if (!ultimoResult?.filas) return;
+  const lines = [ultimoResult.columnas.join('\t')];
+  ultimoResult.filas.forEach(f => lines.push(f.map(v => v??'').join('\t')));
+  navigator.clipboard?.writeText(lines.join('\n'));
+  App.toast('Tabla copiada al portapapeles', 'success');
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function mostrarAlerta(msg, tipo='danger') {
+  const a = document.getElementById('alertaValidacion');
+  a.className = `alert alert-${tipo} py-2 small`;
+  a.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>${escHtml(msg)}`;
+  a.classList.remove('d-none');
+}
+
+function ocultarAlerta() {
+  document.getElementById('alertaValidacion').classList.add('d-none');
+}
+
+// ── Estilos tabla ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.tabla-item').forEach(el => {
+  el.addEventListener('mouseenter', () => { if (!el.style.background) el.style.background='#f3f4f6'; });
+  el.addEventListener('mouseleave', () => { if (el.style.background==='rgb(243, 244, 246)') el.style.background=''; });
+});
+
+// Focus al editor al cargar
+window.addEventListener('load', () => document.getElementById('sqlEditor').focus());
+</script>
+
+<style>
+#sqlEditor::placeholder { color: #6272a4; }
+#sqlEditor::-webkit-scrollbar { width: 6px; }
+#sqlEditor::-webkit-scrollbar-thumb { background: #44475a; border-radius: 3px; }
+.tabla-item:hover { background: var(--primary-lt) !important; }
+.tabla-item.activa { background: var(--primary-lt); }
+kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 3px;
+      padding: 1px 4px; font-size: .65rem; color: #374151; }
+</style>
+{% endblock %}
