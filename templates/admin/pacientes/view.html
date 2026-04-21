@@ -38,7 +38,23 @@
                     {% for p in listado %}
                         <tr>
                             <td>
-                                <div class="small fw-600">{{ p.nombre_completo }}</div>
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <div class="fw-semibold text-dark">
+                                            {{ p.nombre_completo }}
+                                        </div>
+                                        <small class="text-muted">Paciente</small>
+                                    </div>
+
+                                    <span class="badge bg-primary-subtle text-primary d-inline-flex align-items-center gap-1">
+                                        <span class="fw-bold fs-6">
+                                            {{ p.num_consultas_realizadas }}
+                                        </span>
+                                        <small class="fw-medium">
+                                            consultas
+                                        </small>
+                                    </span>
+                                </div>
                             </td>
                             <td><code class="small">{{ p.identificacion }}</code></td>
                             <td class="small">{{ p.telefono|default:"—" }}</td>

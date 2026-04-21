@@ -33,6 +33,12 @@ class Paciente(ModeloBase):
     def nombre_completo(self):
         return f"{self.apellido1} {self.apellido2} {self.nombres}".strip()
 
+    def consultas_realizadas(self):
+        return self.consultas.filter(status=True)
+
+    def num_consultas_realizadas(self):
+        return self.consultas_realizadas().count()
+
     def save(self, *args, **kwargs):
         if self.fecha_nacimiento and not self.edad:
             from datetime import date
