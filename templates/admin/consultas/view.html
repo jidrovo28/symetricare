@@ -28,9 +28,16 @@
   <td class="text-end {% if c.saldo > 0 %}text-danger fw-600{% endif %}">${{ c.saldo|floatformat:2 }}</td>
   <td><span class="badge badge-{{ c.estado }}">{{ c.get_estado_display }}</span></td>
   <td><div class="d-flex gap-1">
-    <button class="btn btn-xs btn-light border" onclick="App.modal('/consultas/',{action:'detalle',id:{{ c.pk }}})" title="Ver"><i class="bi bi-eye"></i></button>
-    {% if c.saldo > 0 %}<button class="btn btn-xs btn-success" onclick="App.modal('/consultas/',{action:'abonaradelanto',id:{{ c.pk }}})" title="Abonar"><i class="bi bi-cash"></i></button>{% endif %}
-    <button class="btn btn-xs btn-light border text-danger" onclick="App.delete('/consultas/',{{ c.pk }},undefined,()=>location.reload())" title="Eliminar"><i class="bi bi-trash"></i></button>
+      <button class="btn btn-xs btn-light border" onclick="App.modal('/consultas/',{action:'detalle',id:{{ c.pk }}})"
+              title="Ver"><i class="bi bi-eye"></i></button>
+      {% if c.estado == 'pendiente' %}
+          <button class="btn btn-xs btn-success"
+                  onclick="App.modal('/consultas/',{action:'abonaradelanto',id:{{ c.pk }}})" title="Abonar"><i
+                  class="bi bi-cash"></i></button>
+          <button class="btn btn-xs btn-light border text-danger"
+                  onclick="App.delete('/consultas/',{{ c.pk }},undefined,()=>location.reload())" title="Eliminar"><i
+                  class="bi bi-trash"></i></button>
+      {% endif %}
   </div></td>
 </tr>{% empty %}<tr><td colspan="8" class="text-center text-muted py-5">Sin consultas</td></tr>{% endfor %}
 </tbody></table></div></div></div>

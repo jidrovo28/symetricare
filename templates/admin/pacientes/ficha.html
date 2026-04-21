@@ -386,11 +386,13 @@
                                                                         ${{ a.monto|floatformat:2 }}
                                                                     </td>
                                                                     <td class="text-end fw-700 text-success">
-                                                                        <button class="btn btn-xs btn-link text-danger p-0 mt-1"
-                                                                                onclick="eliminarAbono({{ a.id }})">
-                                                                            <i class="bi bi-trash"
-                                                                               style="font-size:.75rem"></i>
-                                                                        </button>
+                                                                        {% if c.estado == 'pendiente' %}
+                                                                            <button class="btn btn-xs btn-link text-danger p-0 mt-1"
+                                                                                    onclick="eliminarAbono({{ a.id }})">
+                                                                                <i class="bi bi-trash"
+                                                                                   style="font-size:.75rem"></i>
+                                                                            </button>
+                                                                        {% endif %}
                                                                     </td>
                                                                 </tr>
                                                             {% endfor %}
