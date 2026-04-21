@@ -44,16 +44,15 @@
                                             {{ p.nombre_completo }}
                                         </div>
                                         <small class="text-muted">Paciente</small>
+                                        <br>
+                                        <small class="text-muted">Consultas realizadas</small>
+                                        <span class="badge bg-primary-subtle text-primary d-inline-flex align-items-center gap-1">
+                                            <span class="fw-bold fs-6">
+                                            {{ p.num_consultas_realizadas }}
+                                            </span>
+                                        </span>
                                     </div>
 
-                                    <span class="badge bg-primary-subtle text-primary d-inline-flex align-items-center gap-1">
-                                        <span class="fw-bold fs-6">
-                                            {{ p.num_consultas_realizadas }}
-                                        </span>
-                                        <small class="fw-medium">
-                                            consultas
-                                        </small>
-                                    </span>
                                 </div>
                             </td>
                             <td><code class="small">{{ p.identificacion }}</code></td>
