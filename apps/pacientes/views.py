@@ -171,6 +171,7 @@ def view_ficha(request, pk):
         'todos_tr':   todos_tr,
     })
     try:
+        pac.cuenta.recalcular()
         data['cuenta'] = pac.cuenta
     except Exception:
         data['cuenta'] = None

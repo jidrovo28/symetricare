@@ -9,6 +9,7 @@ from django.http import JsonResponse
 from django.template.loader import get_template
 from apps.core.helpers import adduserdata, MiPaginador
 from .models import Consulta, TratamientoPropuesto, VisitaTratamiento, AbonoConsulta
+from apps.finanzas.models import MovimientoFinanciero
 
 
 @login_required(redirect_field_name='ret', login_url='/login')
@@ -161,14 +162,14 @@ def view_consultas(request):
                 # recalcular_totales() se llama en VisitaTratamiento.save()
                 monto = float(request.POST.get('abono', 0))
                 if monto > 0 and monto <= float(consulta.saldo):
-                    AbonoConsulta.objects.create(
-                        consulta=consulta, servicio=srv, tipo_servicio=srv.tipo,
+                    abono_ = AbonoConsulta.objects.create(
+                        consulta=consulta, visita=visita, servicio=srv, tipo_servicio=srv.tipo,
                         monto=monto,
                         forma_pago=request.POST.get('forma_pago', 'Efectivo'),
                         nota=request.POST.get('nota', ''),
                         usuario_creacion=request.user)
                     MovimientoFinanciero.objects.create(
-                        paciente=consulta.paciente, consulta=consulta,
+                        paciente=consulta.paciente, consulta=consulta, abono=abono_,
                         tipo='abono', monto=monto,
                         descripcion=f'Abono consulta #{consulta.pk}',
                         forma_pago=request.POST.get('forma_pago', 'Efectivo'),
@@ -193,6 +194,7 @@ def view_consultas(request):
         # ── Eliminar tratamiento realizado → reduce la deuda ─────────────
         elif action == 'delete_visita':
             try:
+                from apps.finanzas.models import MovimientoFinanciero
                 visita = get_object_or_404(VisitaTratamiento,
                     pk=request.POST.get('id'))
                 if visita.consulta.estado == Consulta.ATENDIDA:
@@ -201,12 +203,42 @@ def view_consultas(request):
                 visita.status = False
                 visita.save(update_fields=['status'])
                 # recalcular_totales() se llama en save() via la señal
+                abono = AbonoConsulta.objects.filter(status=True, visita=visita).first()
+                if abono:
+                    movimientos = MovimientoFinanciero.objects.filter(status=True, abono=abono).update(status=False)
+                    abono.status=False
+                    abono.save()
                 visita.consulta.recalcular_totales()
+                visita.consulta.paciente.cuenta.recalcular()
                 visita.consulta.refresh_from_db(fields=['total', 'abono', 'saldo'])
                 return JsonResponse({
                     'result':     True,
                     'nuevo_total': f'{visita.consulta.total:.2f}',
                     'nuevo_saldo': f'{visita.consulta.saldo:.2f}',
+                })
+            except Exception as ex:
+                return JsonResponse({'result': False, 'msg': str(ex)})
+
+        elif action == 'delete_abono':
+            try:
+                from apps.finanzas.models import MovimientoFinanciero
+                abono = get_object_or_404(AbonoConsulta, pk=request.POST.get('id'))
+                if abono.consulta.estado == Consulta.ATENDIDA:
+                    return JsonResponse({'result': False, 'msg': 'La consulta ya fue finalizada'})
+                abono.status = False
+                abono.save(update_fields=['status'])
+                if abono.visita:
+                    visita_ = abono.visita
+                    visita_.status = False
+                    visita_.save()
+                movimientos = MovimientoFinanciero.objects.filter(status=True, abono=abono).update(status=False)
+                abono.consulta.recalcular_totales()
+                abono.consulta.paciente.cuenta.recalcular()
+                abono.consulta.refresh_from_db(fields=['total', 'abono', 'saldo'])
+                return JsonResponse({
+                    'result':     True,
+                    'nuevo_total': f'{abono.consulta.total:.2f}',
+                    'nuevo_saldo': f'{abono.consulta.saldo:.2f}',
                 })
             except Exception as ex:
                 return JsonResponse({'result': False, 'msg': str(ex)})
@@ -290,6 +322,9 @@ def view_consultas(request):
         elif action == 'delete':
             try:
                 obj = get_object_or_404(Consulta, pk=request.POST.get('id'))
+                visitas = VisitaTratamiento.objects.filter(status=True, consulta=obj).exists()
+                if visitas:
+                    return JsonResponse({'result': False, 'msg': 'No puede eliminar la consulta debido a que tiene tratamientos registrados.'})
                 obj.status = False
                 obj.save(update_fields=['status'])
                 return JsonResponse({'result': True})

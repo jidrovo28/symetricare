@@ -369,6 +369,7 @@
                                                                 <th>Concepto</th>
                                                                 <th>Forma de pago</th>
                                                                 <th class="text-end">Monto</th>
+                                                                <th class="text-end">Acción</th>
                                                             </tr>
                                                             </thead>
                                                             <tbody>
@@ -388,6 +389,13 @@
                                                                     </td>
                                                                     <td class="text-end fw-700 text-success">
                                                                         ${{ a.monto|floatformat:2 }}
+                                                                    </td>
+                                                                    <td class="text-end fw-700 text-success">
+                                                                        <button class="btn btn-xs btn-link text-danger p-0 mt-1"
+                                                                                onclick="eliminarAbono({{ a.id }})">
+                                                                            <i class="bi bi-trash"
+                                                                               style="font-size:.75rem"></i>
+                                                                        </button>
                                                                     </td>
                                                                 </tr>
                                                             {% endfor %}
@@ -726,7 +734,7 @@
         }
 
         async function eliminarVisita(visitaId) {
-            if (!confirm('¿Eliminar este tratamiento? Se reducirá la deuda.')) return;
+            if (!confirm('¿Eliminar este tratamiento? Se eliminarán los abonos relacionados y se reducirá la deuda.')) return;
             const fd = new FormData();
             fd.append('action', 'delete_visita');
             fd.append('id', visitaId);
@@ -736,6 +744,21 @@
             const d = await r.json();
             if (d.result) {
                 App.toast('Tratamiento eliminado', 'success');
+                location.reload();
+            } else App.toast(d.msg, 'danger');
+        }
+
+        async function eliminarAbono(abonoId) {
+            if (!confirm('¿Eliminar este abono? Se aumentará la deuda.')) return;
+            const fd = new FormData();
+            fd.append('action', 'delete_abono');
+            fd.append('id', abonoId);
+            const r = await fetch('/consultas/', {
+                method: 'POST', body: fd, headers: {'X-CSRFToken': App.csrf()}
+            });
+            const d = await r.json();
+            if (d.result) {
+                App.toast('Abono eliminado', 'success');
                 location.reload();
             } else App.toast(d.msg, 'danger');
         }

@@ -168,8 +168,8 @@ class HistorialAbonoVisitaTratamiento(ModeloBase):
 
 class AbonoConsulta(ModeloBase):
     """Pagos parciales del paciente."""
-    consulta   = models.ForeignKey(Consulta, on_delete=models.CASCADE,
-                   related_name='abonos', null=True, blank=True)
+    consulta   = models.ForeignKey(Consulta, on_delete=models.CASCADE, related_name='abonos', null=True, blank=True)
+    visita   = models.ForeignKey(VisitaTratamiento, on_delete=models.CASCADE, related_name='visitasconsulta', null=True, blank=True)
     servicio = models.ForeignKey('servicios.Servicio',
                                  on_delete=models.PROTECT, null=True, blank=True)
     tipo_servicio = models.ForeignKey('servicios.TipoServicio',

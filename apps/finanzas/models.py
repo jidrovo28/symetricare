@@ -28,7 +28,7 @@ class CuentaPaciente(ModeloBase):
 
         self.total_cobrado = (
                 VisitaTratamiento.objects
-                .filter(status=True, consulta_id__in=consultas_ids)
+                .filter(status=True, consulta_id__in=consultas_ids, contabilizar_costo=True)
                 .aggregate(t=Sum('costo'))['t'] or 0
         )
         self.total_pagado = (
@@ -36,7 +36,10 @@ class CuentaPaciente(ModeloBase):
                 .filter(status=True, consulta_id__in=consultas_ids)
                 .aggregate(t=Sum('monto'))['t'] or 0
         )
-        self.saldo = float(self.total_cobrado) - float(self.total_pagado)
+        total_saldo = 0
+        if float(self.total_pagado) <= float(self.total_cobrado):
+            total_saldo = float(self.total_cobrado) - float(self.total_pagado)
+        self.saldo = total_saldo
         self.save(update_fields=['total_cobrado', 'total_pagado', 'saldo'])
 
 
@@ -49,8 +52,8 @@ class MovimientoFinanciero(ModeloBase):
 
     paciente  = models.ForeignKey('pacientes.Paciente', on_delete=models.PROTECT,
                  related_name='movimientos')
-    consulta  = models.ForeignKey('consultas.Consulta', null=True, blank=True,
-                 on_delete=models.SET_NULL, related_name='movimientos')
+    consulta  = models.ForeignKey('consultas.Consulta', null=True, blank=True, on_delete=models.SET_NULL, related_name='movimientos')
+    abono  = models.ForeignKey('consultas.AbonoConsulta', null=True, blank=True, on_delete=models.SET_NULL, related_name='abonos')
     tipo      = models.CharField(max_length=20, choices=TIPO_CHOICES, blank=True, null=True)
     monto     = models.DecimalField(max_digits=10, decimal_places=2)
     descripcion = models.CharField(max_length=300, blank=True)
