@@ -272,11 +272,13 @@
                                                                         <div class="small fw-600">
                                                                             {{ v.servicio.nombre }}
                                                                         </div>
-
-                                                                        <button class="btn btn-xs btn-success"
-                                                                                onclick="App.modal('/consultas/',{action:'abonartratamiento',id:{{ v.id }}})">
-                                                                            <i class="bi bi-cash"> Abonar al tratamiento</i>
-                                                                        </button>
+                                                                        {% if c.estado == 'pendiente' %}
+                                                                            <button class="btn btn-xs btn-success"
+                                                                                    onclick="App.modal('/consultas/',{action:'abonartratamiento',id:{{ v.id }}})">
+                                                                                <i class="bi bi-cash"> Abonar al
+                                                                                    tratamiento</i>
+                                                                            </button>
+                                                                        {% endif %}
                                                                     </div>
                                                                     <div class="d-flex gap-2 mt-1 flex-wrap">
                                                                         <span class="text-muted"
