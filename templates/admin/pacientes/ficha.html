@@ -268,11 +268,21 @@
                                                         {% for v in c.get_visitas %}
                                                             <div class="d-flex justify-content-between align-items-start py-2 border-bottom">
                                                                 <div>
-                                                                    <div class="small fw-600">{{ v.servicio.nombre }}</div>
+                                                                    <div class="d-flex align-items-center gap-2">
+                                                                        <div class="small fw-600">
+                                                                            {{ v.servicio.nombre }}
+                                                                        </div>
+
+                                                                        <button class="btn btn-xs btn-success"
+                                                                                onclick="App.modal('/consultas/',{action:'abonartratamiento',id:{{ v.id }}})">
+                                                                            <i class="bi bi-cash"> Abonar al tratamiento</i>
+                                                                        </button>
+                                                                    </div>
                                                                     <div class="d-flex gap-2 mt-1 flex-wrap">
-                                                                <span class="text-muted" style="font-size:.72rem">
-                                                                    <i class="bi bi-calendar me-1"></i>{{ v.fecha|date:"d/m/Y" }}
-                                                                </span>
+                                                                        <span class="text-muted"
+                                                                              style="font-size:.72rem">
+                                                                            <i class="bi bi-calendar me-1"></i>{{ v.fecha|date:"d/m/Y" }}
+                                                                        </span>
                                                                         {% if v.tipo_servicio %}
                                                                             <span class="badge"
                                                                                   style="background:{{ v.tipo_servicio.color }}22;color:{{ v.tipo_servicio.color }};font-size:.65rem">
@@ -297,10 +307,16 @@
                                                                     {% endif %}
                                                                 </div>
                                                                 <div class="text-end ms-2 flex-shrink-0">
-                                                                    <div class="fw-700 text-danger small">
-                                                                        ${{ v.costo|floatformat:2 }}</div>
-                                                                    <div class="fw-700 text-success small">Abona
-                                                                        ${{ v.abono|floatformat:2 }}</div>
+                                                                    {% if v.contabilizar_costo %}
+                                                                        <div class="fw-700 text-danger small">
+                                                                            Costo ${{ v.costo|floatformat:2 }}
+                                                                        </div>
+                                                                    {% endif %}
+                                                                    {% if v.abono > 0 %}
+                                                                        <div class="fw-700 text-success small">Abona
+                                                                            ${{ v.abono|floatformat:2 }}
+                                                                        </div>
+                                                                    {% endif %}
                                                                     {% if c.estado == 'pendiente' %}
                                                                         <button class="btn btn-xs btn-link text-danger p-0 mt-1"
                                                                                 onclick="eliminarVisita({{ v.pk }})">

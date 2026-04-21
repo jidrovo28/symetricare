@@ -79,6 +79,17 @@ class Consulta(ModeloBase):
         return (self.abonos.filter(status=True)
          .aggregate(t=Sum('monto'))['t'] or 0)
 
+    def get_total_abonos_visita(self, idvisita):
+        from django.db.models import Sum
+        return (self.abonos.filter(status=True, visita_id=idvisita).aggregate(t=Sum('monto'))['t'] or 0)
+
+    def get_total_saldo_visita(self, idvisita):
+        from django.db.models import Sum
+        visita_ = VisitaTratamiento.objects.get(id=idvisita)
+        abonado = self.get_total_abonos_visita(idvisita)
+        saldo = float(visita_.costo) - float(abonado)
+        return saldo
+
     def get_abonos(self):
         return self.abonos.filter(status=True).order_by('-id')
 
@@ -123,9 +134,11 @@ class VisitaTratamiento(ModeloBase):
                               null=True, blank=True, on_delete=models.SET_NULL)
     descripcion           = models.TextField(blank=True)
     costo                 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    montosaldado          = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     abono                 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     forma_pago            = models.CharField(max_length=50, blank=True)
     contabilizar_costo    = models.BooleanField(default=True, blank=True, null=True)
+    saldo_cuenta          = models.BooleanField(default=False, blank=True, null=True)
 
     class Meta:
         ordering = ['-fecha', '-fecha_creacion']
@@ -152,6 +165,9 @@ class VisitaTratamiento(ModeloBase):
         consulta = self.consulta   # guardar ref antes de borrar
         super().delete(*args, **kwargs)
         consulta.recalcular_totales()
+
+    def get_abonos(self):
+        return self.visitasconsulta.filter(status=True)
 
 class HistorialAbonoVisitaTratamiento(ModeloBase):
     """Pagos parciales del paciente."""

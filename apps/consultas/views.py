@@ -203,10 +203,10 @@ def view_consultas(request):
                 visita.status = False
                 visita.save(update_fields=['status'])
                 # recalcular_totales() se llama en save() via la señal
-                abono = AbonoConsulta.objects.filter(status=True, visita=visita).first()
-                if abono:
+                abonos_ = AbonoConsulta.objects.filter(status=True, visita=visita)
+                for abono in abonos_:
                     movimientos = MovimientoFinanciero.objects.filter(status=True, abono=abono).update(status=False)
-                    abono.status=False
+                    abono.status = False
                     abono.save()
                 visita.consulta.recalcular_totales()
                 visita.consulta.paciente.cuenta.recalcular()
@@ -227,9 +227,10 @@ def view_consultas(request):
                     return JsonResponse({'result': False, 'msg': 'La consulta ya fue finalizada'})
                 abono.status = False
                 abono.save(update_fields=['status'])
-                if abono.visita:
-                    visita_ = abono.visita
-                    visita_.status = False
+                visita_ = abono.visita
+                if visita_:
+                    abonos_visita = visita_.get_abonos().aggregate(t=Sum('monto'))['t'] or 0
+                    visita_.abono = abonos_visita
                     visita_.save()
                 movimientos = MovimientoFinanciero.objects.filter(status=True, abono=abono).update(status=False)
                 abono.consulta.recalcular_totales()
@@ -253,6 +254,14 @@ def view_consultas(request):
                         'msg': 'La consulta ya estaba finalizada'})
                 consulta.estado = Consulta.ATENDIDA
                 consulta.save(update_fields=['estado'])
+                consulta.recalcular_totales()
+                consulta.paciente.cuenta.recalcular()
+                consulta.refresh_from_db(fields=['total', 'abono', 'saldo'])
+                if consulta.saldo == 0:
+                    visitas = VisitaTratamiento.objects.filter(status=True, consulta=consulta, contabilizar_costo=True)
+                    for visita_ in visitas:
+                        visita_.saldo_cuenta = True
+                        visita_.save()
                 return JsonResponse({'result': True,
                     'msg': 'Consulta finalizada'})
             except Exception as ex:
@@ -316,14 +325,14 @@ def view_consultas(request):
                 monto = float(request.POST.get('monto', 0))
                 if monto <= 0:
                     return JsonResponse({'result': False, 'msg': 'Monto inválido'})
-                AbonoConsulta.objects.create(
+                abono_ = AbonoConsulta.objects.create(
                     consulta=consulta, monto=monto,
                     forma_pago=request.POST.get('forma_pago', 'Efectivo'),
                     nota=request.POST.get('nota', ''),
                     adelantado=True,
                     usuario_creacion=request.user)
                 MovimientoFinanciero.objects.create(
-                    paciente=consulta.paciente, consulta=consulta,
+                    paciente=consulta.paciente, consulta=consulta, abono=abono_,
                     tipo='abonoadelantado', monto=monto,
                     descripcion=f'Abono consulta por adelantado #{consulta.pk}',
                     forma_pago=request.POST.get('forma_pago', 'Efectivo'),
@@ -334,6 +343,54 @@ def view_consultas(request):
                 cuenta.recalcular()
                 return JsonResponse({'result': True,
                     'msg': f'Abono adelantado de ${monto:.2f} registrado'})
+            except Exception as ex:
+                return JsonResponse({'result': False, 'msg': str(ex)})
+
+        elif action == 'abonartratamiento':
+            try:
+                with transaction.atomic():
+                    from apps.finanzas.models import CuentaPaciente, MovimientoFinanciero
+                    visita_ = VisitaTratamiento.objects.get(id=request.POST.get('id'))
+                    abonos_visita = float(visita_.visitasconsulta.filter(status=True).aggregate(t=Sum('monto'))['t'] or 0)
+                    consulta = visita_.consulta
+                    monto = float(request.POST.get('monto', 0))
+                    if monto <= 0:
+                        return JsonResponse({'result': False, 'msg': 'Monto inválido'})
+
+                    abono_total = monto + abonos_visita
+                    if abono_total > visita_.costo:
+                        return JsonResponse({'result': False, 'msg': f'El abono total ${abono_total} (${abonos_visita} abonados anteriormente + ${monto}) supera el costo del tratamiento ${visita_.costo}.'})
+
+                    abonos_consulta = float(consulta.abonos.filter(status=True).aggregate(t=Sum('monto'))['t'] or 0)
+                    abono_total = monto + abonos_consulta
+                    deudatotal_consulta = float(consulta.visitas.filter(status=True, contabilizar_costo=True).aggregate(t=Sum('costo'))['t'] or 0)
+                    if abono_total > deudatotal_consulta:
+                        return JsonResponse({'result': False, 'msg': f'El abono total de la consulta ${abono_total} supera la deuda general ${deudatotal_consulta}.'})
+
+                    abono_anterior = visita_.abono
+                    nuevo_monto_abono = Decimal(abono_anterior) + Decimal(monto)
+                    visita_.abono = nuevo_monto_abono
+                    visita_.save()
+                    visita_.registrar_historial()
+
+                    abono_ = AbonoConsulta.objects.create(
+                        consulta=consulta, monto=monto, visita=visita_, servicio=visita_.servicio, tipo_servicio=visita_.tipo_servicio,
+                        forma_pago=request.POST.get('forma_pago', 'Efectivo'),
+                        nota=request.POST.get('nota', ''),
+                        adelantado=False,
+                        usuario_creacion=request.user)
+                    MovimientoFinanciero.objects.create(
+                        paciente=consulta.paciente, consulta=consulta, abono=abono_,
+                        tipo='abono', monto=monto,
+                        descripcion=f'Abono al tratamiento #{consulta.pk}',
+                        forma_pago=request.POST.get('forma_pago', 'Efectivo'),
+                        usuario_creacion=request.user)
+                    cuenta, _ = CuentaPaciente.objects.get_or_create(
+                        paciente=consulta.paciente,
+                        defaults={'usuario_creacion': request.user})
+                    cuenta.recalcular()
+                    return JsonResponse({'result': True,
+                        'msg': f'Abono de ${monto:.2f} al tratamiento {visita_.servicio.nombre} registrado'})
             except Exception as ex:
                 return JsonResponse({'result': False, 'msg': str(ex)})
 
@@ -425,6 +482,17 @@ def view_consultas(request):
                 con = get_object_or_404(Consulta, pk=request.GET.get('id'))
                 data['con'] = con
                 tmpl = get_template('admin/consultas/modal/abonar.html')
+                return JsonResponse({'result': True, 'data': tmpl.render(data, request)})
+            except Exception as ex:
+                return JsonResponse({'result': False, 'msg': str(ex)})
+
+        elif action == 'abonartratamiento':
+            try:
+                visita = get_object_or_404(VisitaTratamiento, pk=request.GET.get('id'))
+                data['visita'] = visita
+                data['id'] = visita.id
+                data['con'] = visita.consulta
+                tmpl = get_template('admin/consultas/modal/abonartratamiento.html')
                 return JsonResponse({'result': True, 'data': tmpl.render(data, request)})
             except Exception as ex:
                 return JsonResponse({'result': False, 'msg': str(ex)})

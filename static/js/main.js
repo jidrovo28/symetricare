@@ -14,7 +14,7 @@ const App = {
     t.style.cssText = 'z-index:9999;min-width:280px;max-width:90vw';
     t.innerHTML = `${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
     document.body.appendChild(t);
-    setTimeout(() => bootstrap.Alert.getOrCreateInstance(t)?.close(), 4500);
+    setTimeout(() => bootstrap.Alert.getOrCreateInstance(t)?.close(), 7500);
   },
   async modal(url, params={}, modalId='mainModal') {
     try {

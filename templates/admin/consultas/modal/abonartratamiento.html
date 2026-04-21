@@ -1,0 +1,41 @@
+{% load tags %}
+<form id="modalForm" action="/consultas/" onsubmit="return false">{% csrf_token %}
+    <input type="hidden" name="action" value="{{ action }}">
+    <input type="hidden" name="id" value="{{ id }}">
+    {% with total_saldo=con|args:id|call:"get_total_saldo_visita" %}
+        <div class="mb-3 p-3 rounded" style="background:#f9fafb">
+            <div class="d-flex justify-content-between"><span class="small">Total tratamiento:</span><span
+                    class="fw-600">${{ visita.costo|floatformat:2 }}</span></div>
+            {% with total_abono=con|args:id|call:"get_total_abonos_visita" %}
+                <div class="d-flex justify-content-between"><span class="small">Abonado actualmente:</span><span
+                        class="text-success">${{ total_abono|floatformat:2 }}</span></div>
+            {% endwith %}
+
+            <div class="d-flex justify-content-between fw-600 text-danger">
+                <span>Saldo pendiente:</span><span>${{ total_saldo|floatformat:2 }}</span></div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label small fw-600">Monto a abonar ($) *</label>
+            <input type="number" name="monto" class="form-control form-control-sm" min="0.01"
+                   max="{{ total_saldo }}" step="0.01"
+                   value="{{ total_saldo }}"
+                   required>
+        </div>
+    {% endwith %}
+    <div class="mb-3">
+        <label class="form-label small fw-600">Forma de pago</label>
+        <select name="forma_pago" class="form-select form-select-sm">
+            <option selected>Efectivo</option>
+            <option>Transferencia</option>
+            <option>Tarjeta</option>
+        </select>
+    </div>
+    <div class="modal-footer px-0 pb-0">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-success btn-sm"
+                onclick="App.submit(document.getElementById('modalForm'),d=>{App.toast(d.msg);bootstrap.Modal.getInstance(document.getElementById('mainModal'))?.hide();location.reload();})">
+            <i class="bi bi-cash me-1"></i>Registrar Abono
+        </button>
+    </div>
+</form>
