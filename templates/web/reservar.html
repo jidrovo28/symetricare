@@ -174,7 +174,7 @@
                             <select name="servicio_id" class="form-select">
                                 <option value="">— Consulta general —</option>
                                 {% for s in servicios %}
-                                    <option value="{{ s.pk }}">{{ s.nombre }} — ${{ s.precio }}</option>{% endfor %}
+                                    <option value="{{ s.pk }}">{{ s.nombre }}</option>{% endfor %}
                             </select>
                         </div>
                         <div class="mb-3">
