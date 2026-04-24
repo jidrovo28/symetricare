@@ -1,14 +1,15 @@
 from datetime import date
+from django.db import transaction
+from django.contrib import messages
 from django.db.models import Q, Sum
 from django.http import JsonResponse
-from django.template.loader import get_template
-from apps.core.helpers import adduserdata, MiPaginador
-from django.shortcuts import render, get_object_or_404, redirect
-from .models import CuentaPaciente, MovimientoFinanciero, Paciente
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
 from apps.finanzas.models import Factura
-from django.contrib import messages
+from django.template.loader import get_template
+from django.views.decorators.http import require_POST
+from apps.core.helpers import adduserdata, MiPaginador
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, get_object_or_404, redirect
+from .models import CuentaPaciente, MovimientoFinanciero, Paciente, TipoIva
 
 @login_required(redirect_field_name='ret', login_url='/login')
 def view_cuentas(request):
@@ -31,7 +32,7 @@ def view_cuentas(request):
         except Exception as ex:
             return JsonResponse({'result': False, 'msg': str(ex)})
 
-    elif request.GET['action'] == 'facturas_consulta':
+    elif request.GET.get('action', '') == 'facturas_consulta':
         return _action_facturas_consulta(request, data, adduserdata)
 
     data.update({
@@ -65,6 +66,107 @@ def view_movimientos(request):
                  'total_abonos': listado.filter(Q(tipo='abono') | Q(tipo='abonoadelantado')).aggregate(t=Sum('monto'))['t'] or 0})
     return render(request, 'admin/finanzas/movimientos.html', data)
 
+@login_required(redirect_field_name='ret', login_url='/login')
+def view_tipo_iva(request):
+    data = {}
+    adduserdata(request, data)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'add':
+            try:
+                pct = float(request.POST.get('porcentaje', 0))
+                if TipoIva.objects.filter(
+                        porcentaje=pct, status=True).exists():
+                    return JsonResponse({'result': False,
+                        'msg': f'Ya existe un tipo de IVA con {pct}%'})
+                es_default = request.POST.get('es_default') == 'on'
+                TipoIva.objects.create(
+                    descripcion  = request.POST.get('descripcion', '').strip(),
+                    porcentaje   = pct,
+                    codigo_sri   = request.POST.get('codigo_sri', '').strip(),
+                    es_default   = es_default,
+                    usuario_creacion = request.user,
+                )
+                return JsonResponse({'result': True,
+                    'msg': f'IVA {pct}% creado'})
+            except Exception as ex:
+                return JsonResponse({'result': False, 'msg': str(ex)})
+
+        elif action == 'edit':
+            try:
+                obj = get_object_or_404(TipoIva,
+                    pk=request.POST.get('id'), status=True)
+                obj.descripcion = request.POST.get('descripcion',
+                                    obj.descripcion).strip()
+                obj.porcentaje  = float(request.POST.get('porcentaje',
+                                    obj.porcentaje))
+                obj.codigo_sri  = request.POST.get('codigo_sri',
+                                    obj.codigo_sri).strip()
+                obj.es_default  = request.POST.get('es_default') == 'on'
+                obj.usuario_modificacion = request.user
+                obj.save()
+                return JsonResponse({'result': True,
+                    'msg': 'IVA actualizado'})
+            except Exception as ex:
+                return JsonResponse({'result': False, 'msg': str(ex)})
+
+        elif action == 'set_default':
+            try:
+                obj = get_object_or_404(TipoIva,
+                    pk=request.POST.get('id'), status=True)
+                TipoIva.objects.filter(status=True).update(
+                    es_default=False)
+                obj.es_default = True
+                obj.save(update_fields=['es_default'])
+                return JsonResponse({'result': True,
+                    'msg': f'{obj.descripcion} es ahora el IVA por defecto'})
+            except Exception as ex:
+                return JsonResponse({'result': False, 'msg': str(ex)})
+
+        elif action == 'delete':
+            try:
+                obj = get_object_or_404(TipoIva,
+                    pk=request.POST.get('id'), status=True)
+                if obj.servicios.filter(status=True).exists():
+                    return JsonResponse({'result': False,
+                        'msg': 'No se puede eliminar: tiene servicios asociados'})
+                obj.status = False
+                obj.save(update_fields=['status'])
+                return JsonResponse({'result': True})
+            except Exception as ex:
+                return JsonResponse({'result': False, 'msg': str(ex)})
+        return JsonResponse({
+            'result': False,
+            'msg': f'Acción inválida: {action}'
+        })
+    else:
+        action = request.GET.get('action', '')
+        if action == 'edit':
+            obj = get_object_or_404(TipoIva,
+                pk=request.GET.get('id'), status=True)
+            data['obj']   = obj
+            data['codes'] = [
+                ('0','Tarifa 0%'), ('2','Tarifa 12%'), ('3','Tarifa 14%'),
+                ('4','Tarifa 15%'), ('5','Tarifa 5%'),
+                ('6','No objeto de IVA'), ('7','Exento de IVA'),
+            ]
+            tmpl = get_template('admin/finanzas/modal/tipo_iva_form.html')
+            return JsonResponse({'result': True,
+                'data': tmpl.render(data, request)})
+
+    from apps.servicios.models import Servicio
+    data.update({
+        'title':    'Tipos de IVA',
+        'listado':  TipoIva.objects.filter(status=True),
+        # Servicios que aún no tienen IVA asignado
+        'servicios_sin_iva': Servicio.objects.filter(
+            status=True, activo=True, tipo_iva__isnull=True
+        ).select_related('tipo').order_by('nombre'),
+    })
+    return render(request, 'admin/finanzas/tipoiva_view.html', data)
+
 @login_required
 def lista(request):
     from apps.finanzas.models import Factura
@@ -88,30 +190,35 @@ def lista(request):
         'q': q, 'estado': estado,
     })
 
-def nueva(request):
-    """Vista para crear factura eligiendo paciente y seleccionando tratamientos."""
-    paciente_id = request.GET.get('paciente_id') or request.POST.get('paciente_id')
+@login_required(redirect_field_name='ret', login_url='/login')
+def nueva_factura(request, paciente_id=None):
+    from datetime import date
+    from apps.pacientes.models import Paciente
 
+    data = {}
+    adduserdata(request, data)
+
+    # Resolver paciente desde URL, GET o POST
     paciente = None
-    consulta = None
-    tratamientos_disponibles = []
-    consultas_paciente = []
+    pid = paciente_id or request.POST.get('paciente_id') or request.GET.get('paciente_id')
+    if pid:
+        paciente = get_object_or_404(Paciente, pk=pid, status=True)
 
-    if paciente_id:
-        paciente = get_object_or_404(Paciente, pk=paciente_id)
-
+    # ── POST: crear la factura ────────────────────────────────────────────
     if request.method == 'POST':
+        if not paciente:
+            messages.error(request, 'Selecciona un paciente.')
+            return redirect('nueva_factura')
         return _crear_factura(request, paciente)
 
-    pacientes = Paciente.objects.filter(status=True).order_by('apellido1', 'apellido2', 'nombres')
-    return render(request, 'admin/finanzas/nuevafactura.html', {
-        'paciente': paciente,
-        'consulta': consulta,
-        'consultas_paciente': consultas_paciente,
-        'tratamientos_disponibles': tratamientos_disponibles,
-        'pacientes': pacientes,
-        'hoy': date.today(),
+    # ── GET: mostrar el formulario ────────────────────────────────────────
+    data.update({
+        'title':     'Nueva Factura',
+        'paciente':  paciente,
+        'hoy':       date.today(),
+        'tipos_iva': TipoIva.objects.filter(status=True).order_by('porcentaje'),
     })
+    return render(request, 'admin/finanzas/nuevafactura.html', data)
 
 @login_required
 def detalle(request, pk):
@@ -166,132 +273,168 @@ def reiniciar_factura(request, pk):
 
 def _crear_factura(request, paciente):
     from datetime import datetime, date
+    from decimal import Decimal, ROUND_HALF_UP
     from apps.consultas.models import VisitaTratamiento, Consulta
     from .models import Factura, DetalleFactura, ConsultaFactura, TratamientoConsultaFactura
 
-    # ── Datos generales ───────────────────────────────────────────────────────
-    descuento   = float(request.POST.get('descuento') or 0)
+    Q2 = lambda v: Decimal(str(v)).quantize(Decimal('0.01'), ROUND_HALF_UP)
+
+    descuento   = Q2(request.POST.get('descuento') or '0')
     metodo_pago = request.POST.get('metodo_pago', 'efectivo')
     notas       = request.POST.get('notas', '')
     fecha_input = request.POST.get('fecha')
     enviar_sri  = request.POST.get('enviar_sri') == '1'
+    fecha       = (datetime.strptime(fecha_input, '%Y-%m-%d').date()
+                   if fecha_input else date.today())
 
-    fecha = (datetime.strptime(fecha_input, '%Y-%m-%d').date()
-             if fecha_input else date.today())
+    pct_factura = Decimal('15')
 
     factura = Factura.objects.create(
-        paciente    = paciente,
-        fecha       = fecha,
-        descuento   = descuento,
-        metodo_pago = metodo_pago,
-        notas       = notas,
-        estado      = 'pendiente',
-        sri_estado  = 'xmlpendiente',
+        paciente       = paciente,
+        fecha          = fecha,
+        descuento      = descuento,
+        metodo_pago    = metodo_pago,
+        notas          = notas,
+        estado         = 'pendiente',
+        sri_estado     = 'xmlpendiente',
+        porcentaje_iva = pct_factura,
         usuario_creacion = request.user,
     )
 
-    # ── Cargar consultas origen y crear ConsultaFactura ───────────────────────
-    # consulta_ids[] → pk de las consultas cuyo botón "Cargar tratamientos"
-    # fue clicado en el formulario (enviados por el JS en el submit)
+    # ── Consultas origen ──────────────────────────────────────────────────────
     consulta_ids = [int(c) for c in request.POST.getlist('consulta_ids') if c.isdigit()]
-    consultas_map = {}   # { consulta_id: ConsultaFactura }
-
+    consultas_map = {}
     for cid in consulta_ids:
         try:
-            consulta = Consulta.objects.get(pk=cid, status=True)
+            c_obj = Consulta.objects.get(pk=cid, status=True)
         except Consulta.DoesNotExist:
             continue
         cf = ConsultaFactura.objects.create(
-            factura          = factura,
-            consulta         = consulta,
-            usuario_creacion = request.user,
-        )
+            factura=factura, consulta=c_obj,
+            usuario_creacion=request.user)
         consultas_map[cid] = cf
 
+    # ── Helper: precio YA INCLUYE IVA → extraer base e IVA ───────────────────
+    def _iva_info(precio_con_iva: Decimal, tipo_iva_obj):
+        """
+        precio_con_iva: lo que el paciente paga (precio del servicio, IVA incluido).
+        Retorna (aplica_iva, base_sin_imp, valor_iva)
+
+        Fórmula:
+            base       = precio_con_iva / (1 + pct/100)
+            valor_iva  = precio_con_iva - base
+        """
+        nonlocal pct_factura
+        if not tipo_iva_obj:
+            return False, precio_con_iva, Decimal('0')
+        pct = Decimal(str(tipo_iva_obj.porcentaje or 0))
+        if pct <= 0:
+            return False, precio_con_iva, Decimal('0')
+        pct_factura = pct
+        base      = Q2(precio_con_iva / (1 + pct / 100))
+        valor_iva = Q2(precio_con_iva - base)
+        return True, base, valor_iva
+
     # ── Detalles desde VisitaTratamiento ─────────────────────────────────────
-    # tr_ids[]       → pk de cada VisitaTratamiento seleccionado
-    # tr_costo_<id>  → costo (abonado) que el usuario vio/editó en pantalla
+    # tr_costo_<id> = precio CON IVA (lo que el frontend muestra al usuario)
     tr_ids = request.POST.getlist('tr_ids')
     for tr_id in tr_ids:
         try:
             vt = VisitaTratamiento.objects.select_related(
-                'servicio', 'tipo_servicio', 'consulta'
+                'servicio', 'servicio__tipo_iva',
+                'tipo_servicio', 'consulta',
             ).get(pk=tr_id, status=True, contabilizar_costo=True)
         except VisitaTratamiento.DoesNotExist:
             continue
 
-        costo_editado = request.POST.get(f'tr_costo_{tr_id}')
-        precio = (float(costo_editado)
-                  if costo_editado not in (None, '', 'None')
-                  else float(vt.costo or 0))
-
-        if precio <= 0:
+        raw = request.POST.get(f'tr_costo_{tr_id}')
+        precio_con_iva = Q2(raw if raw not in (None, '', 'None')
+                            else str(vt.costo or 0))
+        if precio_con_iva <= 0:
             continue
 
-        # Descripción enriquecida para el DetalleFactura
+        tipo_iva_obj              = getattr(vt.servicio, 'tipo_iva', None)
+        aplica_iva, base, val_iva = _iva_info(precio_con_iva, tipo_iva_obj)
+
         tipo_str  = f' [{vt.tipo_servicio.nombre}]' if vt.tipo_servicio else ''
         fecha_str = f' — {vt.fecha.strftime("%d/%m/%Y")}' if vt.fecha else ''
-        descripcion = f'{vt.servicio.nombre}{tipo_str}{fecha_str}'
+        desc      = f'{vt.servicio.nombre}{tipo_str}{fecha_str}'
         if vt.descripcion:
-            descripcion += f' — {vt.descripcion[:80]}'
+            desc += f' — {vt.descripcion[:80]}'
 
         DetalleFactura.objects.create(
-            factura         = factura,
-            descripcion     = descripcion,
-            cantidad        = 1,
-            precio_unitario = precio,
-            subtotal        = round(precio, 2),
+            factura          = factura,
+            descripcion      = desc,
+            cantidad         = 1,
+            precio_unitario  = precio_con_iva,   # precio que ve el usuario
+            subtotal_sin_imp = base,             # base extraída
+            aplica_iva       = aplica_iva,
+            tipo_iva         = tipo_iva_obj,
+            iva              = val_iva,
+            subtotal         = precio_con_iva,   # = base + iva
             usuario_creacion = request.user,
         )
 
-        # Vincular este VisitaTratamiento al ConsultaFactura correspondiente
         cf = consultas_map.get(vt.consulta_id)
         if cf:
             TratamientoConsultaFactura.objects.create(
-                consultafactura  = cf,
-                visita           = vt,
-                servicio         = vt.servicio,
-                tipo_servicio    = vt.tipo_servicio,
-                descripcion      = descripcion,
-                valor            = precio,
-                usuario_creacion = request.user,
-            )
+                consultafactura=cf, visita=vt,
+                servicio=vt.servicio, tipo_servicio=vt.tipo_servicio,
+                descripcion=desc, valor=precio_con_iva,
+                usuario_creacion=request.user)
 
-    # ── Líneas manuales (no vinculan a consulta específica) ───────────────────
+    # ── Líneas manuales ───────────────────────────────────────────────────────
     descs      = request.POST.getlist('linea_desc')
     precios    = request.POST.getlist('linea_precio')
     cantidades = request.POST.getlist('linea_qty')
+    iva_ids    = request.POST.getlist('linea_iva_id')
 
     for i, desc in enumerate(descs):
         if not desc.strip():
             continue
         try:
-            precio = float(precios[i])  if i < len(precios)    else 0.0
-            qty    = int(cantidades[i]) if i < len(cantidades)  else 1
+            precio = Q2(str(max(0.0, float(precios[i]))))
+            qty    = max(1, int(cantidades[i]))
         except (ValueError, IndexError):
-            precio, qty = 0.0, 1
+            precio, qty = Decimal('0'), 1
 
-        precio = max(0.0, precio)
-        qty    = max(1, qty)
+        precio_con_iva = Q2(precio * qty)   # precio total con IVA incluido
+
+        tipo_iva_obj = None
+        try:
+            iva_id = iva_ids[i] if i < len(iva_ids) else ''
+            if iva_id:
+                from apps.finanzas.models import TipoIva
+                tipo_iva_obj = TipoIva.objects.get(pk=iva_id)
+        except Exception:
+            pass
+
+        aplica_iva, base, val_iva = _iva_info(precio_con_iva, tipo_iva_obj)
 
         DetalleFactura.objects.create(
             factura          = factura,
             descripcion      = desc.strip(),
             cantidad         = qty,
             precio_unitario  = precio,
-            subtotal         = round(qty * precio, 2),
+            subtotal_sin_imp = base,
+            aplica_iva       = aplica_iva,
+            tipo_iva         = tipo_iva_obj,
+            iva              = val_iva,
+            subtotal         = precio_con_iva,
             usuario_creacion = request.user,
         )
 
-    # ── Recalcular y validar ──────────────────────────────────────────────────
     factura.calcular_totales()
 
+    if factura.porcentaje_iva != pct_factura and factura.iva > 0:
+        factura.porcentaje_iva = pct_factura
+        factura.save(update_fields=['porcentaje_iva'])
+
     if factura.total <= 0:
-        factura.delete()   # cascade elimina ConsultaFactura y TratamientoConsultaFactura
+        factura.delete()
         messages.error(request, 'La factura no tiene ítems o el total es $0.00.')
         return redirect('nueva_factura')
 
-    # ── SRI (hilo daemon) ─────────────────────────────────────────────────────
     if enviar_sri:
         import threading
         def _sri():
@@ -300,14 +443,13 @@ def _crear_factura(request, paciente):
                 procesar_factura(factura)
             except Exception as e:
                 import logging
-                logging.getLogger('finanzas').error(
-                    f'[SRI] Factura {factura.pk}: {e}')
+                logging.getLogger('finanzas').error(f'[SRI] {factura.pk}: {e}')
         threading.Thread(target=_sri, daemon=True).start()
         messages.success(request,
-            f'Factura #{factura.numero} creada — enviando al SRI en segundo plano.')
+            f'Factura #{factura.numero_formateado} creada — enviando al SRI.')
     else:
         messages.success(request,
-            f'Factura #{factura.numero} creada correctamente.')
+            f'Factura #{factura.numero_formateado} creada correctamente.')
 
     return redirect('detalle_factura', pk=factura.pk)
 

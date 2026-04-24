@@ -38,7 +38,6 @@
             border: 1px solid rgba(0, 0, 0, .1);
         }
 
-        /* El input de costo no propaga el click a la card */
         .tr-card .costo-input {
             width: 80px;
             text-align: right;
@@ -113,17 +112,14 @@
 {% endblock %}
 
 {% block content %}
-    <form method="post" id="frmFactura">
+    <form method="post" id="frmFactura" action="{% url 'nueva_factura' %}">
         {% csrf_token %}
-
         <div class="row g-4">
 
-            <!-- LEFT -->
+            <!-- LEFT ─────────────────────────────────────────────── -->
             <div class="col-lg-4">
                 <div class="card mb-3">
-                    <div class="card-header fw-700 py-2">
-                        <span class="badge bg-primary me-2">1</span>Paciente
-                    </div>
+                    <div class="card-header fw-700 py-2"><span class="badge bg-primary me-2">1</span>Paciente</div>
                     <div class="card-body">
                         {% if paciente %}
                             <input type="hidden" name="paciente_id" id="pacienteId" value="{{ paciente.id }}">
@@ -146,8 +142,7 @@
                                             class="bi bi-search text-muted"></i></span>
                                     <input type="text" id="buscarPaciente" class="form-control border-start-0"
                                            placeholder="Buscar por cédula, nombre..." autofocus>
-                                    <button type="button" class="btn btn-outline-primary"
-                                            onclick="mostrarFormNuevo()" title="Registrar nuevo paciente">
+                                    <button type="button" class="btn btn-outline-primary" onclick="mostrarFormNuevo()">
                                         <i class="bi bi-person-plus"></i>
                                     </button>
                                 </div>
@@ -173,8 +168,8 @@
                             </div>
                             <div id="seccionNuevoPaciente" style="display:none">
                                 <div class="d-flex align-items-center gap-2 mb-3">
-                                    <div class="fw-600 small" style="color:var(--primary)">
-                                        <i class="bi bi-person-plus me-1"></i>Registrar nuevo paciente
+                                    <div class="fw-600 small" style="color:var(--primary)"><i
+                                            class="bi bi-person-plus me-1"></i>Registrar nuevo paciente
                                     </div>
                                     <button type="button" class="btn btn-xs btn-outline-secondary ms-auto"
                                             onclick="ocultarFormNuevo()">
@@ -237,8 +232,7 @@
                 </div>
 
                 <div class="card mb-3">
-                    <div class="card-header fw-700 py-2">
-                        <span class="badge bg-primary me-2">2</span>Datos de Factura
+                    <div class="card-header fw-700 py-2"><span class="badge bg-primary me-2">2</span>Datos de Factura
                     </div>
                     <div class="card-body">
                         <div class="mb-2">
@@ -258,8 +252,7 @@
                         </div>
                         <div class="mb-2">
                             <label class="form-label small fw-600">Descuento global ($)</label>
-                            <input type="number" name="descuento" id="inDescuento"
-                                   class="form-control form-control-sm"
+                            <input type="number" name="descuento" id="inDescuento" class="form-control form-control-sm"
                                    value="0" min="0" step="0.01" oninput="recalcular()">
                         </div>
                         <div class="mb-2">
@@ -273,21 +266,19 @@
                             <label class="form-check-label small fw-600" for="chkSRI">
                                 <i class="bi bi-send-check text-success me-1"></i>Enviar al SRI y autorizar
                             </label>
-                            <div class="text-muted" style="font-size:.7rem;padding-left:1.5rem;">
-                                Requiere certificado P12 configurado
+                            <div class="text-muted" style="font-size:.7rem;padding-left:1.5rem;">Requiere certificado
+                                P12 configurado
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- CENTER -->
+            <!-- CENTER ────────────────────────────────────────────── -->
             <div class="col-lg-5">
                 <div class="card mb-3">
                     <div class="card-header d-flex align-items-center justify-content-between py-2">
-                <span class="fw-700">
-                    <i class="bi bi-clipboard2-pulse me-2 text-primary"></i>Consultas del paciente
-                </span>
+                        <span class="fw-700"><i class="bi bi-clipboard2-pulse me-2 text-primary"></i>Consultas del paciente</span>
                         <span id="trCount" class="badge bg-primary">0 ítems</span>
                     </div>
                     <div class="card-body p-2">
@@ -303,44 +294,34 @@
                     </div>
                 </div>
 
-                <!-- Tratamientos con costo editable -->
                 <div class="card mb-3" id="cardTratamientos" style="display:none">
                     <div class="card-header d-flex align-items-center justify-content-between py-2">
-                <span class="fw-700">
-                    <i class="bi bi-capsule me-2 text-success"></i>
-                    Tratamientos — <span id="lblConsultaActual" class="text-muted fw-400 small"></span>
-                </span>
-                        <button type="button" class="btn btn-xs btn-outline-secondary"
-                                onclick="cerrarTratamientos()">
+      <span class="fw-700">
+        <i class="bi bi-capsule me-2 text-success"></i>
+        Tratamientos — <span id="lblConsultaActual" class="text-muted fw-400 small"></span>
+      </span>
+                        <button type="button" class="btn btn-xs btn-outline-secondary" onclick="cerrarTratamientos()">
                             <i class="bi bi-x"></i>
                         </button>
                     </div>
                     <div class="card-body p-2">
-                        <!-- Ayuda costo editable -->
-                        <div class="d-flex align-items-center gap-1 mb-2 px-1"
-                             style="font-size:.7rem;color:#64748b">
+                        <div class="d-flex align-items-center gap-1 mb-2 px-1" style="font-size:.7rem;color:#64748b">
                             <i class="bi bi-pencil-square me-1"></i>
-                            Puedes editar el costo de cada ítem directamente antes de agregar.
+                            Edita el costo base (sin IVA) de cada ítem antes de agregar.
                         </div>
                         <div id="tratamientosCargados"></div>
                         <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
-                    <span class="small text-muted">
-                        <span id="countTrCargados">0</span> tratamiento(s)
-                    </span>
-                            <button type="button" class="btn btn-xs btn-success"
-                                    onclick="agregarTodosAFactura()">
+                            <span class="small text-muted"><span id="countTrCargados">0</span> tratamiento(s)</span>
+                            <button type="button" class="btn btn-xs btn-success" onclick="agregarTodosAFactura()">
                                 <i class="bi bi-plus-circle me-1"></i>Agregar todos
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Líneas manuales -->
                 <div class="card">
                     <div class="card-header d-flex align-items-center justify-content-between py-2">
-                <span class="fw-700">
-                    <i class="bi bi-plus-circle me-2 text-warning"></i>Líneas manuales
-                </span>
+                        <span class="fw-700"><i class="bi bi-plus-circle me-2 text-warning"></i>Líneas manuales</span>
                         <button type="button" class="btn btn-warning btn-sm" onclick="agregarLinea()">
                             <i class="bi bi-plus me-1"></i>Agregar
                         </button>
@@ -353,7 +334,7 @@
                 </div>
             </div>
 
-            <!-- RIGHT: Resumen -->
+            <!-- RIGHT ─────────────────────────────────────────────── -->
             <div class="col-lg-3">
                 <div class="card mb-3 sticky-top" style="top:80px;">
                     <div class="card-header fw-700 py-2">
@@ -366,22 +347,26 @@
                     </div>
                     <div class="card-footer p-0">
                         <div class="total-box">
-                            <div class="d-flex justify-content-between small mb-1" style="color:#94a3b8;">
-                                <span>Subtotal</span><span id="txtSubtotal">$0.00</span>
+                            <div id="rowSub0" class="d-flex justify-content-between small mb-1" style="color:#94a3b8">
+                                <span>Subtotal 0%</span><span id="txtSub0">$0.00</span>
                             </div>
-                            <div class="d-flex justify-content-between small mb-2" style="color:#94a3b8;">
-                                <span>Descuento</span><span id="txtDescuento">$0.00</span>
+                            <div id="rowSubIva" class="d-flex justify-content-between small mb-1"
+                                 style="color:#94a3b8;display:none!important">
+                                <span>Base gravada IVA</span><span id="txtSubIva">$0.00</span>
                             </div>
-                            <div class="d-flex justify-content-between small mb-1"
-                                 style="color:#64748b;font-size:.7rem;">
-                                <span>IVA (servicios salud 0%)</span><span>$0.00</span>
+                            <div id="rowIva" class="d-flex justify-content-between small mb-1"
+                                 style="color:#fbbf24;display:none!important">
+                                <span id="txtIvaLabel">IVA</span><span id="txtIva">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between small mb-2" style="color:#94a3b8">
+                                <span>Descuento</span><span id="txtDescuento">-$0.00</span>
                             </div>
                             <hr style="border-color:#1e3a5f;margin:.5rem 0;">
                             <div class="text-center">
                                 <div style="color:#94a3b8;font-size:.7rem;">TOTAL</div>
                                 <div class="total-val" id="txtTotal">$0.00</div>
                             </div>
-                            <button type="submit" class="btn btn-success w-100 mt-3 fw-700" id="btnCrear"
+                            <button type="submit" class="btn btn-success w-100 mt-3 fw-700"
                                     style="border-radius:10px;padding:.75rem;">
                                 <i class="bi bi-receipt-cutoff me-2"></i>Crear Factura
                             </button>
@@ -394,13 +379,26 @@
     </form>
 {% endblock %}
 
-{# ── Solo el bloque extra_js con los 3 cambios marcados ── #}
 {% block extra_js %}
     <script>
         const items = {};
         let lineaCount = 0;
         let tratamientosFetch = [];
-        const consultasUsadas = new Set(); // ← NUEVO: registra qué consultas se cargaron
+        const consultasUsadas = new Set();
+
+        // Tipos IVA desde el view (pasar tipos_iva en el contexto)
+        const TIPOS_IVA = [
+            {id: '', label: 'Sin IVA', pct: 0},
+            {% for t in tipos_iva %}
+                {id: '{{ t.pk }}', label: '{{ t.descripcion }} ({{ t.porcentaje }}%)', pct: {{ t.porcentaje }}},
+            {% endfor %}
+        ];
+
+        function _ivaOptsHtml(selId = '') {
+            return TIPOS_IVA.map(t =>
+                `<option value="${t.id}" data-pct="${t.pct}" ${t.id == selId ? 'selected' : ''}>${t.label}</option>`
+            ).join('');
+        }
 
         function _costoCard(card) {
             const inp = card.querySelector('.costo-input');
@@ -411,6 +409,7 @@
             return card.querySelector('.fw-600.small').textContent.trim();
         }
 
+        // ── Paciente ──────────────────────────────────────────────────────────────────
         function mostrarFormNuevo() {
             document.getElementById('seccionBuscar').style.display = 'none';
             document.getElementById('seccionNuevoPaciente').style.display = 'block';
@@ -493,7 +492,7 @@
                 el.type = 'button';
                 el.className = 'list-group-item list-group-item-action py-2';
                 el.innerHTML = `<div class="small fw-600">${p.nombre}</div>
-            <div class="text-muted" style="font-size:.72rem">${p.identificacion} | ${p.telefono || ''}</div>`;
+      <div class="text-muted" style="font-size:.72rem">${p.identificacion} | ${p.telefono || ''}</div>`;
                 el.onclick = () => {
                     document.getElementById('pacienteId').value = p.id;
                     document.getElementById('pacienteInfoTxt').textContent = `${p.nombre} — ${p.identificacion}`;
@@ -508,6 +507,7 @@
         }, 300);
         document.getElementById('buscarPaciente')?.addEventListener('input', e => _searchPac(e.target.value));
 
+        // ── Consultas ──────────────────────────────────────────────────────────────────
         async function cargarConsultasPaciente(pacienteId) {
             const cont = document.getElementById('listaConsultas');
             cont.innerHTML = '<div class="text-center py-2"><div class="spinner-border spinner-border-sm text-primary"></div></div>';
@@ -516,7 +516,7 @@
                 const d = await r.json();
                 cont.innerHTML = '';
                 if (!d.data?.length) {
-                    cont.innerHTML = '<div class="text-muted small p-2">Sin consultas registradas</div>';
+                    cont.innerHTML = '<div class="text-muted small p-2">Sin consultas</div>';
                     return;
                 }
                 d.data.forEach(c => {
@@ -525,21 +525,20 @@
                     item.className = 'list-group-item list-group-item-action py-2';
                     item.dataset.consultaId = c.id;
                     item.innerHTML = `
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="fw-600 small">${c.motivo || 'Sin motivo'} <span class="badge badge-${c.estado || 'success'}">${c.estado_display}</span></div>
-                        <div class="text-muted" style="font-size:.72rem">
-                            ${c.fecha_creacion}
-                            ${c.n_visitas ? `· ${c.n_visitas} visita(s)` : ''}
-                            ${parseFloat(c.total) > 0 ? `· $${parseFloat(c.total).toFixed(2)}` : ''}
-                        </div>
-                    </div>
-                    <button type="button"
-                            class="btn btn-xs btn-outline-primary flex-shrink-0 ms-2"
-                            onclick="event.stopPropagation(); cargarTratamientosConsulta(${c.id}, '${(c.motivo || '').replace(/'/g, "\\'")}')">
-                        <i class="bi bi-download me-1"></i>Cargar tratamientos
-                    </button>
-                </div>`;
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="fw-600 small">${c.motivo || 'Sin motivo'} <span class="badge badge-${c.estado || 'success'}">${c.estado_display}</span></div>
+            <div class="text-muted" style="font-size:.72rem">
+              ${c.fecha_creacion}
+              ${c.n_visitas ? `· ${c.n_visitas} visita(s)` : ''}
+              ${parseFloat(c.total) > 0 ? `· $${parseFloat(c.total).toFixed(2)}` : ''}
+            </div>
+          </div>
+          <button type="button" class="btn btn-xs btn-outline-primary flex-shrink-0 ms-2"
+                  onclick="event.stopPropagation();cargarTratamientosConsulta(${c.id},'${(c.motivo || '').replace(/'/g, "\\'")}')">
+            <i class="bi bi-download me-1"></i>Cargar
+          </button>
+        </div>`;
                     cont.appendChild(item);
                 });
             } catch (e) {
@@ -547,22 +546,20 @@
             }
         }
 
+        // ── Tratamientos ─────────────────────────────────────────────────────────────
         async function cargarTratamientosConsulta(consultaId, motivo) {
             const card = document.getElementById('cardTratamientos');
             const cont = document.getElementById('tratamientosCargados');
-            const lblMotivo = document.getElementById('lblConsultaActual');
-
             card.style.display = 'block';
             cont.innerHTML = '<div class="text-center py-2"><div class="spinner-border spinner-border-sm text-primary"></div></div>';
-            lblMotivo.textContent = motivo ? motivo.substring(0, 50) : `Consulta #${consultaId}`;
-
+            document.getElementById('lblConsultaActual').textContent =
+                motivo ? motivo.substring(0, 50) : `Consulta #${consultaId}`;
             document.querySelectorAll('#listaConsultas .list-group-item').forEach(el =>
                 el.classList.toggle('active', el.dataset.consultaId == consultaId));
 
             try {
                 const r = await fetch(`/pacientes/?action=get_tratamientos_consulta&consulta_id=${consultaId}`);
                 const d = await r.json();
-
                 if (!d.result) {
                     cont.innerHTML = `<div class="text-danger small p-2">${d.msg}</div>`;
                     return;
@@ -574,36 +571,43 @@
                 if (!tratamientosFetch.length) {
                     cont.innerHTML = '<div class="text-muted small text-center py-3">'
                         + '<i class="bi bi-clipboard2-x d-block fs-4 mb-1 opacity-25"></i>'
-                        + 'Esta consulta no tiene tratamientos realizados</div>';
+                        + 'Sin tratamientos realizados</div>';
                     return;
                 }
 
-                // ← NUEVO: registrar esta consulta como usada
                 consultasUsadas.add(String(consultaId));
 
-                cont.innerHTML = tratamientosFetch.map(t => `
-            <div class="tr-card d-flex align-items-center gap-2 mb-2 selected"
-                 id="trf_${t.id}" data-id="${t.id}" data-precio="${t.abonado}"
-                 onclick="toggleTratFetch(this)">
-                <input type="checkbox" class="form-check-input m-0 flex-shrink-0"
-                       checked style="pointer-events:none">
-                <div class="tr-dot flex-shrink-0" style="background:${t.color}"></div>
-                <div class="flex-grow-1 min-w-0">
-                    <div class="fw-600 small text-truncate">${t.nombre}</div>
-                    <div class="text-muted" style="font-size:.7rem">
-                        ${t.fecha_visita}${t.tipo ? ` · ${t.tipo}` : ''}${t.descripcion ? ` · ${t.descripcion.substring(0, 35)}` : ''}
-                    </div>
-                </div>
-                <div class="d-flex align-items-center gap-1 flex-shrink-0">
-                    <span class="small text-muted">$</span>
-                    <input type="number"
-                           class="costo-input"
-                           value="${parseFloat(t.abonado).toFixed(2)}"
-                           min="0" step="0.01"
-                           onclick="event.stopPropagation()"
-                           oninput="onCostoInput(this)">
-                </div>
-            </div>`).join('');
+                cont.innerHTML = tratamientosFetch.map(t => {
+                    const pct = parseFloat(t.tipo_iva_pct || 0);
+                    const ivaLabel = pct > 0
+                        ? `<span style="font-size:.65rem;color:#92400e;margin-left:4px">IVA ${pct}%</span>`
+                        : `<span style="font-size:.65rem;color:#64748b;margin-left:4px">Sin IVA</span>`;
+                    return `
+        <div class="tr-card d-flex align-items-center gap-2 mb-2 selected"
+             id="trf_${t.id}" data-id="${t.id}"
+             data-precio="${t.abonado}"
+             data-iva-pct="${pct}"
+             onclick="toggleTratFetch(this)">
+          <input type="checkbox" class="form-check-input m-0 flex-shrink-0" checked style="pointer-events:none">
+          <div class="tr-dot flex-shrink-0" style="background:${t.color}"></div>
+          <div class="flex-grow-1 min-w-0">
+            <div class="fw-600 small text-truncate">${t.nombre}</div>
+            <div class="text-muted" style="font-size:.7rem">
+              ${t.fecha_visita}${t.tipo ? ` · ${t.tipo}` : ''}
+              ${ivaLabel}
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-1 flex-shrink-0">
+            <span class="small text-muted">$</span>
+            <input type="number" class="costo-input"
+                   value="${parseFloat(t.abonado).toFixed(2)}"
+                   min="0" step="0.01"
+                   title="Costo base sin IVA"
+                   onclick="event.stopPropagation()"
+                   oninput="onCostoInput(this)">
+          </div>
+        </div>`;
+                }).join('');
 
             } catch (e) {
                 cont.innerHTML = `<div class="text-danger small p-2">Error: ${e.message}</div>`;
@@ -614,17 +618,17 @@
             const card = inp.closest('.tr-card');
             if (!card.classList.contains('selected')) return;
             const id = card.dataset.id;
-            const precio = parseFloat(inp.value) || 0;
-            const nombre = _nombreCard(card);
-            items[`tr_${id}`] = {nombre, precio};
+            const precio = parseFloat(inp.value) || 0;   // precio CON IVA
+            const pct = parseFloat(card.dataset.ivaPct || '0');
+            items[`tr_${id}`] = {nombre: _nombreCard(card), precio, pct};
             recalcular();
         }
 
         function toggleTratFetch(card) {
             if (event.target.classList.contains('costo-input')) return;
             const id = card.dataset.id;
-            const precio = _costoCard(card);
-            const nombre = _nombreCard(card);
+            const precio = _costoCard(card);             // precio CON IVA
+            const pct = parseFloat(card.dataset.ivaPct || '0');
             const chk = card.querySelector('input[type=checkbox]');
             if (card.classList.contains('selected')) {
                 card.classList.remove('selected');
@@ -633,24 +637,23 @@
             } else {
                 card.classList.add('selected');
                 chk.checked = true;
-                items[`tr_${id}`] = {nombre, precio};
+                items[`tr_${id}`] = {nombre: _nombreCard(card), precio, pct};
             }
             recalcular();
         }
 
         function agregarTodosAFactura() {
-            const seleccionados = document.querySelectorAll('#tratamientosCargados .tr-card.selected');
-            if (!seleccionados.length) {
+            const sel = document.querySelectorAll('#tratamientosCargados .tr-card.selected');
+            if (!sel.length) {
                 App.toast('No hay tratamientos seleccionados', 'warning');
                 return;
             }
-            seleccionados.forEach(card => {
-                items[`tr_${card.dataset.id}`] = {
-                    nombre: _nombreCard(card),
-                    precio: _costoCard(card),
-                };
+            sel.forEach(card => {
+                const precio = _costoCard(card);
+                const pct = parseFloat(card.dataset.ivaPct || '0');
+                items[`tr_${card.dataset.id}`] = {nombre: _nombreCard(card), precio, pct};
             });
-            App.toast(`${seleccionados.length} tratamiento(s) agregados`, 'success');
+            App.toast(`${sel.length} tratamiento(s) agregados`, 'success');
             recalcular();
         }
 
@@ -658,10 +661,10 @@
             document.getElementById('cardTratamientos').style.display = 'none';
             document.getElementById('tratamientosCargados').innerHTML = '';
             tratamientosFetch = [];
-            document.querySelectorAll('#listaConsultas .list-group-item').forEach(el =>
-                el.classList.remove('active'));
+            document.querySelectorAll('#listaConsultas .list-group-item').forEach(el => el.classList.remove('active'));
         }
 
+        // ── Líneas manuales ───────────────────────────────────────────────────────────
         function agregarLinea() {
             const cont = document.getElementById('lineasExtras');
             document.getElementById('sinLineas')?.remove();
@@ -670,21 +673,25 @@
             div.className = 'linea-extra mb-2';
             div.id = `linea_${i}`;
             div.innerHTML = `
-        <div class="d-flex gap-2 align-items-start">
-            <div class="flex-grow-1">
-                <input type="text" name="linea_desc" class="form-control form-control-sm mb-1"
-                       placeholder="Descripción del servicio" oninput="actualizarLinea(${i})">
-                <div class="d-flex gap-1">
-                    <input type="number" name="linea_qty" class="form-control form-control-sm"
-                           style="width:70px" value="1" min="1" oninput="actualizarLinea(${i})">
-                    <input type="number" name="linea_precio" class="form-control form-control-sm"
-                           placeholder="Precio" min="0" step="0.01" oninput="actualizarLinea(${i})">
-                </div>
-            </div>
-            <button type="button" class="btn btn-outline-danger btn-sm" onclick="quitarLinea(${i})">
-                <i class="bi bi-trash"></i>
-            </button>
-        </div>`;
+    <div class="d-flex gap-2 align-items-start">
+      <div class="flex-grow-1">
+        <input type="text" name="linea_desc" class="form-control form-control-sm mb-1"
+               placeholder="Descripción" oninput="actualizarLinea(${i})">
+        <div class="d-flex gap-1">
+          <input type="number" name="linea_qty" class="form-control form-control-sm"
+                 style="width:60px" value="1" min="1" oninput="actualizarLinea(${i})">
+          <input type="number" name="linea_precio" class="form-control form-control-sm"
+                 placeholder="Precio base" min="0" step="0.01" oninput="actualizarLinea(${i})">
+          <select name="linea_iva_id" class="form-select form-select-sm" style="max-width:130px"
+                  onchange="actualizarLinea(${i})">
+            ${_ivaOptsHtml()}
+          </select>
+        </div>
+      </div>
+      <button type="button" class="btn btn-outline-danger btn-sm" onclick="quitarLinea(${i})">
+        <i class="bi bi-trash"></i>
+      </button>
+    </div>`;
             cont.appendChild(div);
         }
 
@@ -692,7 +699,10 @@
             const desc = document.querySelector(`#linea_${i} [name="linea_desc"]`)?.value.trim();
             const precio = parseFloat(document.querySelector(`#linea_${i} [name="linea_precio"]`)?.value) || 0;
             const qty = parseInt(document.querySelector(`#linea_${i} [name="linea_qty"]`)?.value) || 1;
-            if (desc) items[`linea_${i}`] = {nombre: desc, precio: precio * qty};
+            const ivaEl = document.querySelector(`#linea_${i} [name="linea_iva_id"]`);
+            const pct = parseFloat(ivaEl?.selectedOptions[0]?.dataset.pct || '0');
+            const total = precio * qty;                 // precio por cantidad, CON IVA
+            if (desc) items[`linea_${i}`] = {nombre: desc, precio: total, pct};
             else delete items[`linea_${i}`];
             recalcular();
         }
@@ -703,32 +713,65 @@
             recalcular();
         }
 
+        // ── Recalcular ────────────────────────────────────────────────────────────────
         function recalcular() {
-            let subtotal = 0;
-            Object.values(items).forEach(it => subtotal += it.precio);
+            let sub0 = 0, subIvaBase = 0, iva = 0;
+
+            Object.values(items).forEach(it => {
+                const precio = parseFloat(it.precio) || 0;
+                const pct = parseFloat(it.pct) || 0;
+                if (pct > 0) {
+                    // Extraer base e IVA del precio que ya los incluye
+                    const base = precio / (1 + pct / 100);
+                    const ivaV = precio - base;
+                    subIvaBase += parseFloat(base.toFixed(2));
+                    iva += parseFloat(ivaV.toFixed(2));
+                } else {
+                    sub0 += precio;
+                }
+            });
+
             const descuento = parseFloat(document.getElementById('inDescuento')?.value) || 0;
-            const total = Math.max(0, subtotal - descuento);
-            document.getElementById('txtSubtotal').textContent = '$' + subtotal.toFixed(2);
+            const total = Math.max(0, sub0 + subIvaBase + iva - descuento);
+
+            document.getElementById('txtSub0').textContent = '$' + sub0.toFixed(2);
+            document.getElementById('txtSubIva').textContent = '$' + subIvaBase.toFixed(2);
+            document.getElementById('txtIva').textContent = '$' + iva.toFixed(2);
             document.getElementById('txtDescuento').textContent = '-$' + descuento.toFixed(2);
             document.getElementById('txtTotal').textContent = '$' + total.toFixed(2);
+
+            document.getElementById('rowSubIva').style.display = subIvaBase > 0 ? '' : 'none';
+            document.getElementById('rowIva').style.display = subIvaBase > 0 ? '' : 'none';
+
             const count = Object.keys(items).length;
             const badge = document.getElementById('trCount');
             if (badge) badge.textContent = count + ' ítem' + (count !== 1 ? 's' : '');
+
             const resumen = document.getElementById('resumenItems');
             if (!count) {
                 resumen.innerHTML = '<div class="text-muted small text-center py-3">Sin ítems</div>';
             } else {
-                resumen.innerHTML = Object.entries(items).map(([k, it]) =>
-                    `<div class="d-flex justify-content-between align-items-center small mb-1 pb-1 border-bottom">
-                <span class="text-truncate me-2" style="max-width:160px">${it.nombre}</span>
-                <div class="d-flex align-items-center gap-1 flex-shrink-0">
-                    <span class="fw-600 text-success">$${it.precio.toFixed(2)}</span>
-                    <button type="button" class="btn btn-xs btn-link text-danger p-0"
-                            onclick="quitarItem('${k}')">
-                        <i class="bi bi-x"></i>
-                    </button>
-                </div>
-             </div>`).join('');
+                resumen.innerHTML = Object.entries(items).map(([k, it]) => {
+                    const precio = parseFloat(it.precio) || 0;
+                    const pct = parseFloat(it.pct) || 0;
+                    const base = pct > 0 ? precio / (1 + pct / 100) : precio;
+                    const ivaV = precio - base;
+                    return `<div class="d-flex justify-content-between align-items-center small mb-1 pb-1 border-bottom">
+        <div>
+          <span class="text-truncate d-block" style="max-width:150px">${it.nombre}</span>
+          ${pct > 0
+                        ? `<span style="font-size:.65rem;color:#92400e">
+                 base $${base.toFixed(2)} + IVA ${pct}% $${ivaV.toFixed(2)}
+               </span>`
+                        : ''}
+        </div>
+        <div class="d-flex align-items-center gap-1 flex-shrink-0">
+          <span class="fw-600 text-success">$${precio.toFixed(2)}</span>
+          <button type="button" class="btn btn-xs btn-link text-danger p-0"
+                  onclick="quitarItem('${k}')"><i class="bi bi-x"></i></button>
+        </div>
+      </div>`;
+                }).join('');
             }
         }
 
@@ -752,23 +795,19 @@
                 App.toast('Selecciona un paciente', 'warning');
                 return;
             }
-
-            // tr_ids + costos editados
             Object.keys(items).filter(k => k.startsWith('tr_')).forEach(k => {
                 const id = k.replace('tr_', '');
-                const inp = document.createElement('input');
-                inp.type = 'hidden';
-                inp.name = 'tr_ids';
-                inp.value = id;
-                this.appendChild(inp);
-                const costoInp = document.createElement('input');
-                costoInp.type = 'hidden';
-                costoInp.name = `tr_costo_${id}`;
-                costoInp.value = items[k].precio;
-                this.appendChild(costoInp);
+                const i1 = document.createElement('input');
+                i1.type = 'hidden';
+                i1.name = 'tr_ids';
+                i1.value = id;
+                this.appendChild(i1);
+                const i2 = document.createElement('input');
+                i2.type = 'hidden';
+                i2.name = `tr_costo_${id}`;
+                i2.value = items[k].precio;               // precio CON IVA
+                this.appendChild(i2);
             });
-
-            // ← NUEVO: consulta_ids de las consultas cargadas
             consultasUsadas.forEach(cid => {
                 const inp = document.createElement('input');
                 inp.type = 'hidden';
@@ -778,8 +817,8 @@
             });
         });
 
+
         recalcular();
         {% if paciente %}cargarConsultasPaciente({{ paciente.id }});{% endif %}
     </script>
 {% endblock %}
-

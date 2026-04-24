@@ -1,29 +1,93 @@
-<form id="modalForm" action="/servicios/" onsubmit="return false">{% csrf_token %}
+<form id="modalForm" action="/servicios/" onsubmit="return false">
+{% csrf_token %}
 <input type="hidden" name="action" value="{% if obj %}edit{% else %}add{% endif %}">
 {% if obj %}<input type="hidden" name="id" value="{{ obj.pk }}">{% endif %}
+
 <div class="row g-2">
-  <div class="col-12"><label class="form-label small fw-600">Nombre *</label>
-    <input type="text" name="nombre" value="{{ obj.nombre|default:'' }}" class="form-control form-control-sm" required></div>
-  <div class="col-md-6"><label class="form-label small fw-600">Tipo de Servicio</label>
+
+  <div class="col-12">
+    <label class="form-label small fw-600">Nombre *</label>
+    <input type="text" name="nombre" value="{{ obj.nombre|default:'' }}"
+           class="form-control form-control-sm" required autofocus>
+  </div>
+
+  <div class="col-md-6">
+    <label class="form-label small fw-600">Tipo de Servicio</label>
     <select name="tipo_id" class="form-select form-select-sm">
       <option value="">Sin tipo</option>
-      {% for t in tipos %}<option value="{{ t.pk }}" {% if obj.tipo == t %}selected{% endif %}>{{ t.nombre }}</option>{% endfor %}
-    </select></div>
-  <div class="col-md-3"><label class="form-label small fw-600">Precio *</label>
-    <input type="number" name="precio" value="{{ obj.precio|default:'0' }}" class="form-control form-control-sm" step="0.01" min="0" required></div>
-  <div class="col-md-3"><label class="form-label small fw-600">Duración (min)</label>
-    <input type="number" name="duracion_min" value="{{ obj.duracion_min|default:'60' }}" class="form-control form-control-sm" min="15"></div>
-  <div class="col-12"><label class="form-label small fw-600">Descripción</label>
-    <textarea name="descripcion" class="form-control form-control-sm" rows="2">{{ obj.descripcion|default:'' }}</textarea></div>
-  {% if obj %}<div class="col-12">
+      {% for t in tipos %}
+      <option value="{{ t.pk }}" {% if obj.tipo == t %}selected{% endif %}>
+        {{ t.nombre }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-3">
+    <label class="form-label small fw-600">Precio *</label>
+    <div class="input-group input-group-sm">
+      <span class="input-group-text">$</span>
+      <input type="number" name="precio" value="{{ obj.precio|default:'0' }}"
+             class="form-control" step="0.01" min="0" required>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <label class="form-label small fw-600">Duración (min)</label>
+    <input type="number" name="duracion_min" value="{{ obj.duracion_min|default:'60' }}"
+           class="form-control form-control-sm" min="15">
+  </div>
+
+  <!-- IVA ────────────────────────────────────────────────────────── -->
+  <div class="col-12">
+    <label class="form-label small fw-600">
+      <i class="bi bi-percent me-1 text-warning"></i>Tarifa IVA
+    </label>
+    <select name="tipo_iva_id" class="form-select form-select-sm">
+      <option value="">— Sin IVA —</option>
+      {% for iva in tipos_iva %}
+      <option value="{{ iva.pk }}"
+              {% if obj.tipo_iva == iva %}selected
+              {% elif not obj and iva.es_default %}selected
+              {% endif %}>
+        {{ iva.descripcion }} — {{ iva.porcentaje|floatformat:0 }}%
+        {% if iva.es_default %}(default){% endif %}
+      </option>
+      {% endfor %}
+    </select>
+    <div class="form-text" style="font-size:.68rem">
+      Se aplica automáticamente al facturar este servicio.
+    </div>
+  </div>
+
+  <div class="col-12">
+    <label class="form-label small fw-600">Descripción</label>
+    <textarea name="descripcion" class="form-control form-control-sm"
+              rows="2">{{ obj.descripcion|default:'' }}</textarea>
+  </div>
+
+  {% if obj %}
+  <div class="col-12">
     <div class="form-check">
-      <input type="checkbox" name="activo" class="form-check-input" {% if obj.activo %}checked{% endif %} id="activo">
-      <label class="form-check-label small fw-600" for="activo">Activo</label>
-    </div></div>{% endif %}
+      <input type="checkbox" name="activo" class="form-check-input"
+             {% if obj.activo %}checked{% endif %} id="fActivo">
+      <label class="form-check-label small fw-600" for="fActivo">Activo</label>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
+
 <div class="modal-footer px-0 pb-0 mt-3">
-  <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-  <button type="button" class="btn btn-primary btn-sm" onclick="App.submit(document.getElementById('modalForm'),()=>{bootstrap.Modal.getInstance(document.getElementById('mainModal'))?.hide();location.reload();})">
+  <button type="button" class="btn btn-outline-secondary btn-sm"
+          data-bs-dismiss="modal">Cancelar</button>
+  <button type="button" class="btn btn-primary btn-sm"
+          onclick="App.submit(document.getElementById('modalForm'), d => {
+            App.toast(d.msg || 'Guardado');
+            bootstrap.Modal.getInstance(document.getElementById('mainModal'))?.hide();
+            location.reload();
+          })">
     <i class="bi bi-save me-1"></i>Guardar
   </button>
-</div></form>
+</div>
+</form>

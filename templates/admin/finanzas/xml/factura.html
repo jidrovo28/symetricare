@@ -1,4 +1,4 @@
-{% load tags%}<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+{% load tags %}<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <factura id="comprobante" version="1.1.0">
     <infoTributaria>
         <ambiente>{{ clinica.sri_ambiente }}</ambiente>
@@ -22,15 +22,28 @@
         <razonSocialComprador>{{ factura.paciente.nombre_completo|limpiar_texto_xml }}</razonSocialComprador>
         <identificacionComprador>{{ identificacion_comprador }}</identificacionComprador>
         {% if factura.paciente.direccion %}<direccionComprador>{{ factura.paciente.direccion|limpiar_texto_xml }}</direccionComprador>{% endif %}
-        <totalSinImpuestos>{{ factura.subtotal|stringformat:"0.2f" }}</totalSinImpuestos>
+        {# totalSinImpuestos = suma de bases (sin IVA, sin descuento) #}
+        <totalSinImpuestos>{{ factura.subtotal_0|add:factura.subtotal_iva|stringformat:"0.2f" }}</totalSinImpuestos>
         <totalDescuento>{{ factura.descuento|stringformat:"0.2f" }}</totalDescuento>
         <totalConImpuestos>
+            {# Bloque 0%: solo si hay base gravada a tarifa 0 #}
+            {% if factura.subtotal_0 > 0 %}
             <totalImpuesto>
                 <codigo>2</codigo>
                 <codigoPorcentaje>0</codigoPorcentaje>
-                <baseImponible>{{ factura.subtotal|stringformat:"0.2f" }}</baseImponible>
+                <baseImponible>{{ factura.subtotal_0|stringformat:"0.2f" }}</baseImponible>
                 <valor>0.00</valor>
             </totalImpuesto>
+            {% endif %}
+            {# Bloque IVA: solo si hay base gravada con IVA > 0 #}
+            {% if factura.subtotal_iva > 0 %}
+            <totalImpuesto>
+                <codigo>2</codigo>
+                <codigoPorcentaje>{{ factura.porcentaje_iva|porcentaje_a_codigo_sri }}</codigoPorcentaje>
+                <baseImponible>{{ factura.subtotal_iva|stringformat:"0.2f" }}</baseImponible>
+                <valor>{{ factura.iva|stringformat:"0.2f" }}</valor>
+            </totalImpuesto>
+            {% endif %}
         </totalConImpuestos>
         <propina>0.00</propina>
         <importeTotal>{{ factura.total|stringformat:"0.2f" }}</importeTotal>
@@ -50,16 +63,25 @@
             <codigoPrincipal>{{ det.codigo_principal|default:det.pk }}</codigoPrincipal>
             <descripcion>{{ det.descripcion|limpiar_texto_xml }}</descripcion>
             <cantidad>{{ det.cantidad|stringformat:"0.2f" }}</cantidad>
-            <precioUnitario>{{ det.precio_unitario|stringformat:"0.2f" }}</precioUnitario>
-            <descuento>{{ det.descuento|stringformat:"0.2f" }}</descuento>
-            <precioTotalSinImpuesto>{{ det.subtotal|stringformat:"0.2f" }}</precioTotalSinImpuesto>
+            {# precio unitario = base sin IVA (SRI exige precio sin impuesto) #}
+            <precioUnitario>{{ det.subtotal_sin_imp|stringformat:"0.2f" }}</precioUnitario>
+            <descuento>0.00</descuento>
+            {# precioTotalSinImpuesto = base del ítem, sin IVA #}
+            <precioTotalSinImpuesto>{{ det.subtotal_sin_imp|stringformat:"0.2f" }}</precioTotalSinImpuesto>
             <impuestos>
                 <impuesto>
                     <codigo>2</codigo>
+                    {% if det.aplica_iva and det.tipo_iva %}
+                    <codigoPorcentaje>{{ det.tipo_iva.codigo_sri }}</codigoPorcentaje>
+                    <tarifa>{{ det.tipo_iva.porcentaje|stringformat:"0.2f" }}</tarifa>
+                    <baseImponible>{{ det.subtotal_sin_imp|stringformat:"0.2f" }}</baseImponible>
+                    <valor>{{ det.iva|stringformat:"0.2f" }}</valor>
+                    {% else %}
                     <codigoPorcentaje>0</codigoPorcentaje>
-                    <tarifa>0</tarifa>
-                    <baseImponible>{{ det.subtotal|stringformat:"0.2f" }}</baseImponible>
+                    <tarifa>0.00</tarifa>
+                    <baseImponible>{{ det.subtotal_sin_imp|stringformat:"0.2f" }}</baseImponible>
                     <valor>0.00</valor>
+                    {% endif %}
                 </impuesto>
             </impuestos>
         </detalle>

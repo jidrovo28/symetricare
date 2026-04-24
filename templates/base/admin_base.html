@@ -49,6 +49,7 @@
     {% if request.user.es_admin %}
     <div class="sb-section mt-1">Finanzas</div>
     <a href="/finanzas/facturas/" class="sb-link {% block fac_fin %}{% endblock %}"><i class="bi bi-graph-up"></i>Facturas</a>
+    <a href="/finanzas/iva/" class="sb-link {% block iva_fin %}{% endblock %}"><i class="bi bi-graph-up"></i>Tipos de iva</a>
     <a href="/finanzas/" class="sb-link {% block n_fin %}{% endblock %}"><i class="bi bi-graph-up"></i>Estado de Cuentas</a>
     <a href="/finanzas/movimientos/" class="sb-link {% block n_mov %}{% endblock %}"><i class="bi bi-arrow-left-right"></i>Movimientos</a>
     {% endif %}

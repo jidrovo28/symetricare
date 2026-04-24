@@ -645,6 +645,21 @@ def limpiar_texto_xml(texto, quitar_tildes=True):
 
     return texto
 
+@register.filter
+def porcentaje_a_codigo_sri(pct):
+    """Convierte porcentaje de IVA al código SRI correspondiente."""
+    tabla = {
+        0:  '0',   # IVA 0%
+        5:  '5',   # IVA 5%
+        12: '2',   # IVA 12%
+        14: '3',   # IVA 14%
+        15: '4',   # IVA 15% (vigente Ecuador)
+    }
+    try:
+        return tabla.get(int(float(str(pct))), '4')
+    except Exception:
+        return '4'
+
 
 register.filter('diaenletra', diaenletra)
 register.filter('ceros', ceros)

@@ -1,0 +1,293 @@
+{% extends "base/admin_base.html" %}
+{% block title %}Tipos de IVA{% endblock %}
+
+{% block content %}
+    <div class="row g-4">
+
+        <!-- Formulario nuevo -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header fw-700 py-2">
+                    <i class="bi bi-plus-circle me-2 text-primary"></i>Nuevo tipo de IVA
+                </div>
+                <div class="card-body">
+                    <form id="frmIva" action="/finanzas/iva/" onsubmit="return false">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add">
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-600">Descripción *</label>
+                            <input type="text" name="descripcion" class="form-control form-control-sm"
+                                   placeholder="Ej: IVA 15%" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-600">Porcentaje (%) *</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" name="porcentaje" class="form-control"
+                                       step="0.01" min="0" max="100" placeholder="15.00" required>
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-600">
+                                Código SRI
+                                <span class="text-muted fw-400">(opcional)</span>
+                            </label>
+                            <select name="codigo_sri" class="form-select form-select-sm">
+                                <option value="">— Sin código —</option>
+                                <option value="0">0 — Tarifa 0%</option>
+                                <option value="2">2 — Tarifa 12%</option>
+                                <option value="3">3 — Tarifa 14%</option>
+                                <option value="4">4 — Tarifa 15%</option>
+                                <option value="5">5 — Tarifa 5%</option>
+                                <option value="6">6 — No objeto de IVA</option>
+                                <option value="7">7 — Exento de IVA</option>
+                            </select>
+                            <div class="form-text" style="font-size:.68rem">
+                                Usado al generar el XML para el SRI Ecuador.
+                            </div>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input type="checkbox" name="es_default" id="chkDefault"
+                                   class="form-check-input">
+                            <label class="form-check-label small fw-600" for="chkDefault">
+                                Usar como IVA por defecto en nuevos ítems
+                            </label>
+                        </div>
+
+                        <button type="button" class="btn btn-primary btn-sm w-100"
+                                onclick="App.submit(document.getElementById('frmIva'), () => location.reload())">
+                            <i class="bi bi-save me-1"></i>Guardar
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Ayuda códigos SRI -->
+            <div class="card mt-3">
+                <div class="card-header py-2 small fw-700">
+                    <i class="bi bi-info-circle me-2 text-primary"></i>Códigos SRI Ecuador
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0" style="font-size:.78rem">
+                        <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Tarifa</th>
+                            <th>%</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td><code>0</code></td>
+                            <td>IVA 0%</td>
+                            <td>0%</td>
+                        </tr>
+                        <tr>
+                            <td><code>2</code></td>
+                            <td>IVA 12%</td>
+                            <td>12%</td>
+                        </tr>
+                        <tr>
+                            <td><code>3</code></td>
+                            <td>IVA 14%</td>
+                            <td>14%</td>
+                        </tr>
+                        <tr>
+                            <td><code>4</code></td>
+                            <td>IVA 15% (vigente)</td>
+                            <td class="fw-700 text-success">15%</td>
+                        </tr>
+                        <tr>
+                            <td><code>5</code></td>
+                            <td>IVA 5%</td>
+                            <td>5%</td>
+                        </tr>
+                        <tr>
+                            <td><code>6</code></td>
+                            <td>No objeto de IVA</td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td><code>7</code></td>
+                            <td>Exento de IVA</td>
+                            <td>—</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Listado -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header fw-700 py-2">
+                    <i class="bi bi-percent me-2 text-primary"></i>Tipos de IVA configurados
+                </div>
+                <div class="card-body p-0">
+                    {% if listado %}
+                        <table class="table table-hover mb-0">
+                            <thead>
+                            <tr>
+                                <th>Descripción</th>
+                                <th class="text-center">Porcentaje</th>
+                                <th class="text-center">Código SRI</th>
+                                <th class="text-center">Default</th>
+                                <th class="text-center">Servicios</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for iva in listado %}
+                                <tr>
+                                    <td class="fw-600">
+                                        {% if iva.es_default %}
+                                            <i class="bi bi-star-fill me-1" style="color:#f59e0b;font-size:.75rem"></i>
+                                        {% endif %}
+                                        {{ iva.descripcion }}
+                                    </td>
+                                    <td class="text-center">
+              <span class="badge {% if iva.porcentaje == 0 %}bg-secondary{% else %}bg-warning text-dark{% endif %}"
+                    style="font-size:.8rem">
+                {{ iva.porcentaje|floatformat:0 }}%
+              </span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if iva.codigo_sri %}
+                                            <code class="small">{{ iva.codigo_sri }}</code>
+                                        {% else %}
+                                            <span class="text-muted small">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if iva.es_default %}
+                                            <span class="badge bg-success small">Sí</span>
+                                        {% else %}
+                                            <form method="post" action="/parametros/iva/" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="set_default">
+                                                <input type="hidden" name="id" value="{{ iva.pk }}">
+                                                <button type="submit" class="btn btn-xs btn-outline-secondary">
+                                                    Usar como default
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+              <span class="badge bg-light text-dark">
+                {{ iva.servicios.all.count }}
+              </span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-1 justify-content-end">
+                                            <button class="btn btn-xs btn-light border"
+                                                    onclick="App.modal('/finanzas/iva/',{action:'edit',id:{{ iva.pk }}})"
+                                                    title="Editar">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <form method="post" action="/finanzas/iva/" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="delete">
+                                                <input type="hidden" name="id" value="{{ iva.pk }}">
+                                                <button type="submit" class="btn btn-xs btn-light border text-danger"
+                                                        onclick="return confirm('¿Eliminar {{ iva.descripcion }}?')">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div class="text-center text-muted py-5">
+                            <i class="bi bi-percent fs-2 d-block mb-2 opacity-25"></i>
+                            <div class="small">Sin tipos de IVA configurados.</div>
+                            <div class="small mt-1">Crea al menos IVA 0% e IVA 15%.</div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Servicios sin IVA asignado -->
+            {% if servicios_sin_iva %}
+                <div class="card mt-3 border-warning">
+                    <div class="card-header py-2 small fw-700 text-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        {{ servicios_sin_iva|length }} servicio(s) sin IVA asignado
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm mb-0" style="font-size:.8rem">
+                            <tbody>
+                            {% for s in servicios_sin_iva %}
+                                <tr>
+                                    <td class="fw-500">{{ s.nombre }}</td>
+                                    <td class="text-muted">{{ s.tipo.nombre|default:"Sin tipo" }}</td>
+                                    <td class="text-end">${{ s.precio|floatformat:2 }}</td>
+                                    <td class="text-end">
+                                        <a href="/servicios/?action=edit&id={{ s.pk }}"
+                                           class="btn btn-xs btn-outline-warning">
+                                            <i class="bi bi-pencil me-1"></i>Asignar IVA
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    async function guardarTipoIva() {
+        const form = document.getElementById('modalForm');
+        const desc = form.querySelector('[name="descripcion"]').value.trim();
+        const pct = form.querySelector('[name="porcentaje"]').value.trim();
+
+        if (!desc) {
+            App.toast('La descripción es obligatoria', 'warning');
+            return;
+        }
+        if (!pct || isNaN(parseFloat(pct))) {
+            App.toast('El porcentaje es obligatorio', 'warning');
+            return;
+        }
+
+        const fd = new FormData(form);
+        try {
+            const r = await fetch("{% url 'tipo_iva' %}", {
+                method: 'POST', body: fd,
+                headers: {'X-CSRFToken': App.csrf()}
+            });
+            const text = await r.text();   // leer como texto primero
+            let d;
+            try {
+                d = JSON.parse(text);
+            } catch (_) {
+                // El servidor devolvió HTML → mostrar las primeras líneas en consola
+                console.error('Respuesta no-JSON del servidor:', text.substring(0, 500));
+                App.toast('Error del servidor — revisa la consola (F12)', 'danger');
+                return;
+            }
+            if (d.result) {
+                App.toast(d.msg || 'IVA guardado', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('mainModal'))?.hide();
+                location.reload();
+            } else {
+                App.toast(d.msg || 'Error al guardar', 'danger');
+            }
+        } catch (ex) {
+            App.toast('Error de conexión: ' + ex.message, 'danger');
+        }
+    }
+</script>
+{% endblock %}

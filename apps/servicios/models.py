@@ -15,16 +15,21 @@ class TipoServicio(ModeloBase):
 
 
 class Servicio(ModeloBase):
-    tipo        = models.ForeignKey(TipoServicio, on_delete=models.SET_NULL,
-                   null=True, blank=True, related_name='servicios')
-    nombre      = models.CharField(max_length=200)
-    descripcion = models.TextField(blank=True)
-    precio      = models.DecimalField(max_digits=10, decimal_places=2)
-    activo      = models.BooleanField(default=True)
-    duracion_min = models.IntegerField(default=60, help_text='Duración en minutos')
+    tipo         = models.ForeignKey(TipoServicio, on_delete=models.SET_NULL,
+                    null=True, blank=True, related_name='servicios')
+    nombre       = models.CharField(max_length=200)
+    descripcion  = models.TextField(blank=True)
+    precio       = models.DecimalField(max_digits=10, decimal_places=2)
+    # ── IVA: qué tarifa aplica este servicio ─────────────────────────────────
+    tipo_iva     = models.ForeignKey('finanzas.TipoIva', on_delete=models.SET_NULL,
+                    null=True, blank=True, related_name='servicios',
+                    help_text='Tarifa de IVA aplicada al facturar este servicio')
+    activo       = models.BooleanField(default=True)
+    duracion_min = models.IntegerField(default=60,
+                    help_text='Duración en minutos')
 
     class Meta:
         ordering = ['nombre']
 
     def __str__(self):
-        return f"{self.nombre} — ${self.precio}"
+        return f'{self.nombre} — ${self.precio}'

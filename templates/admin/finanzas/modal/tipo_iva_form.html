@@ -1,0 +1,61 @@
+<form id="modalForm" onsubmit="return false">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="{% if obj %}edit{% else %}add{% endif %}">
+    {% if obj %}<input type="hidden" name="id" value="{{ obj.pk }}">{% endif %}
+
+    <div class="mb-3">
+        <label class="form-label small fw-600">Descripción *</label>
+        <input type="text" name="descripcion" class="form-control form-control-sm"
+               value="{{ obj.descripcion|default:'' }}" required autofocus
+               placeholder="Ej: IVA 15%">
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label small fw-600">Porcentaje (%) *</label>
+        <div class="input-group input-group-sm">
+            <input type="number" name="porcentaje" class="form-control"
+                   step="0.01" min="0" max="100"
+                   value="{{ obj.porcentaje|default:'' }}"
+                   placeholder="15.00" required>
+            <span class="input-group-text">%</span>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label small fw-600">Código SRI</label>
+        <select name="codigo_sri" class="form-select form-select-sm">
+            <option value="">— Sin código —</option>
+            {% for cod, label in codes %}
+                <option value="{{ cod }}" {% if obj.codigo_sri == cod %}selected{% endif %}>
+                    {{ cod }} — {{ label }}
+                </option>
+            {% empty %}
+                <option value="0" {% if obj.codigo_sri == "0" %}selected{% endif %}>0 — Tarifa 0%</option>
+                <option value="2" {% if obj.codigo_sri == "2" %}selected{% endif %}>2 — Tarifa 12%</option>
+                <option value="3" {% if obj.codigo_sri == "3" %}selected{% endif %}>3 — Tarifa 14%</option>
+                <option value="4" {% if obj.codigo_sri == "4" %}selected{% endif %}>4 — Tarifa 15%</option>
+                <option value="5" {% if obj.codigo_sri == "5" %}selected{% endif %}>5 — Tarifa 5%</option>
+                <option value="6" {% if obj.codigo_sri == "6" %}selected{% endif %}>6 — No objeto de IVA</option>
+                <option value="7" {% if obj.codigo_sri == "7" %}selected{% endif %}>7 — Exento de IVA</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-check mb-3">
+        <input type="checkbox" name="es_default" id="chkEsDefault"
+               class="form-check-input" {% if obj.es_default %}checked{% endif %}>
+        <label class="form-check-label small fw-600" for="chkEsDefault">
+            Usar como IVA por defecto en nuevos ítems
+        </label>
+    </div>
+
+    <div class="modal-footer px-0 pb-0">
+        <button type="button" class="btn btn-outline-secondary btn-sm"
+                data-bs-dismiss="modal">Cancelar
+        </button>
+        <button type="button" class="btn btn-primary btn-sm"
+                onclick="guardarTipoIva()">
+            <i class="bi bi-save me-1"></i>Guardar
+        </button>
+    </div>
+</form>

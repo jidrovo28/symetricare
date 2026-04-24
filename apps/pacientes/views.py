@@ -113,6 +113,7 @@ def view_pacientes(request):
             return JsonResponse({'data': result})
 
 
+
         elif action == 'get_tratamientos_consulta':
             from apps.consultas.models import Consulta, VisitaTratamiento
             from django.db.models import Sum
@@ -124,8 +125,7 @@ def view_pacientes(request):
                 consulta = Consulta.objects.get(pk=consulta_id, status=True)
             except Consulta.DoesNotExist:
                 return JsonResponse({'result': False, 'msg': 'Consulta no encontrada'})
-            tratos = (VisitaTratamiento.objects.filter(status=True, consulta=consulta,
-                                                       contabilizar_costo=True).select_related('servicio', 'tipo_servicio').order_by('id'))
+            tratos = (VisitaTratamiento.objects.filter(status=True, consulta=consulta, contabilizar_costo=True).select_related('servicio', 'servicio__tipo_iva', 'tipo_servicio').order_by('id'))
             result = []
             for t in tratos:
                 total_costo = Decimal(t.costo or 0)
@@ -133,13 +133,15 @@ def view_pacientes(request):
                 visitas_ids = VisitaTratamiento.objects.filter(status=True, siguiente_visita=t, consulta=consulta).values_list('id', flat=True)
                 abonos_posteriores = Decimal(consulta.abonos.filter(status=True, visita_id__in=visitas_ids).aggregate(total=Sum('monto'))['total'] or 0)
                 total_abonos = abonos_inicial + abonos_posteriores
-                saldo = total_costo - total_abonos
-                if total_abonos > 0:
-                    result.append({'id': t.pk, 'nombre': t.servicio.nombre,
-                                   'tipo': t.tipo_servicio.nombre if t.tipo_servicio else '',
-                                   'color': t.tipo_servicio.color if t.tipo_servicio else '#6366f1',
-                        'abonado': Decimal(total_abonos), 'fecha_visita': t.fecha.strftime('%d/%m/%Y'), 'descripcion': t.descripcion or '',})
-
+                if total_abonos <= 0:
+                    continue
+                tipo_iva = getattr(t.servicio, 'tipo_iva', None)
+                tipo_iva_pct = float(tipo_iva.porcentaje) if tipo_iva else 0
+                tipo_iva_id = tipo_iva.pk if tipo_iva else ''
+                result.append({
+                    'id': t.pk, 'nombre': t.servicio.nombre, 'tipo': t.tipo_servicio.nombre if t.tipo_servicio else '',
+                    'color': t.tipo_servicio.color if t.tipo_servicio else '#6366f1', 'abonado': str(total_abonos), 'fecha_visita': t.fecha.strftime('%d/%m/%Y'),
+                    'descripcion': t.descripcion or '', 'tipo_iva_id': tipo_iva_id, 'tipo_iva_pct': tipo_iva_pct,})
             return JsonResponse({'result': True, 'motivo': consulta.motivo_consulta, 'data': result,})
 
         else:
