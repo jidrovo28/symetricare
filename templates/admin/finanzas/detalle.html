@@ -1,0 +1,476 @@
+{% extends "base/admin_base.html" %}
+{% load tags %}
+{% block title %}Factura #{{ factura.numero }}{% endblock %}
+{% block page_title %}Factura #{{ factura.numero_formateado }}{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{% url 'lista_facturas' %}" class="btn btn-outline-secondary btn-sm me-1">
+        <i class="bi bi-arrow-left me-1"></i>Volver
+    </a>
+    {% if factura.sri_estado != 'autorizada' and factura.status %}
+        <button onclick="reiniciarXml()" class="btn btn-success btn-sm me-1">
+            <i class="bi bi-send-check me-1"></i>Reiniciar xml
+        </button>
+        <button onclick="enviarSRI()" class="btn btn-success btn-sm me-1">
+            <i class="bi bi-send-check me-1"></i>Enviar SRI
+        </button>
+    {% endif %}
+    <a href="javascript:window.print()" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-printer me-1"></i>Imprimir
+    </a>
+{% endblock %}
+
+{% block extra_css %}
+    <style>
+        @media print {
+            .sidebar, .topbar, .btn, .card-header .btn, #sriPanel {
+                display: none !important;
+            }
+
+            .card {
+                box-shadow: none !important;
+                border: 1px solid #ccc !important;
+            }
+        }
+
+        .sri-badge-autorizada {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+
+        .sri-badge-rechazada {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .sri-badge-enviada {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+
+        .sri-badge-no_aplica {
+            background: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #cbd5e1;
+        }
+
+        .sri-badge-no_enviada {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fcd34d;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="card shadow-sm mb-3">
+        <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+
+            <!-- IZQUIERDA -->
+            <div>
+                <a href="{% url 'lista_facturas' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> Volver
+                </a>
+            </div>
+
+            <!-- DERECHA -->
+            <div class="d-flex gap-2">
+
+                {% if factura.sri_estado != 'autorizada' and factura.status %}
+                    <button onclick="reiniciarXml()" class="btn btn-success btn-sm me-1">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Reiniciar xml
+                    </button>
+                    <button onclick="enviarSRI()" class="btn btn-success btn-sm">
+                        <i class="bi bi-send-check me-1"></i> Enviar SRI
+                    </button>
+                {% endif %}
+
+                <a href="javascript:window.print()" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-printer me-1"></i> Imprimir
+                </a>
+
+            </div>
+
+        </div>
+    </div>
+    <div class="row g-4">
+
+        <!-- MAIN -->
+        <div class="col-lg-8">
+
+            <!-- SRI Status -->
+            <div class="card mb-3" id="sriPanel">
+                <div class="card-body py-2 d-flex align-items-center gap-3 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-700 small">Estado SRI:</span>
+                        <span class="badge px-3 py-1 sri-badge-{{ factura.sri_estado }}" style="font-size:.8rem;">
+                            {% if factura.sri_estado == 'autorizada' %}<i class="bi bi-check-circle-fill me-1"></i>AUTORIZADA
+                            {% elif factura.sri_estado == 'rechazada' %}<i class="bi bi-x-circle-fill me-1"></i>RECHAZADA
+                            {% elif factura.sri_estado == 'enviada' %}<i class="bi bi-clock-history me-1"></i>ENVIADA (pendiente
+                                autorización)
+                            {% elif factura.sri_estado == 'no_enviada' %}<i class="bi bi-exclamation-triangle me-1"></i>NO ENVIADA
+                            {% else %}<i class="bi bi-dash-circle me-1"></i>No aplica
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="small text-muted">
+                        Ambiente: <strong>{% if factura.sri_ambiente == '1' %}
+                        Pruebas{% elif factura.sri_ambiente == '2' %}Producción{% endif %}</strong>
+                    </div>
+                    {% if factura.sri_numero_autorizacion %}
+                        <div class="small text-muted">
+                            N° Auth: <strong>{{ factura.sri_numero_autorizacion }}</strong>
+                            {% if factura.sri_fecha_autorizacion %}
+                                · {{ factura.sri_fecha_autorizacion|date:"d/m/Y H:i" }}
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                    {% if factura.clave_acceso %}
+                        <div class="small text-muted ms-auto">
+                            Clave: <code style="font-size:.65rem;">{{ factura.clave_acceso|truncatechars:20 }}…</code>
+                        </div>
+                    {% endif %}
+                </div>
+                {% if factura.sri_respuesta %}
+                    <div class="card-footer py-1"
+                         style="background:{% if factura.sri_estado == 'autorizada' %}#f0fdf4{% elif factura.sri_estado == 'rechazada' %}#fef2f2{% else %}#f8fafc{% endif %};">
+                        <span class="small text-muted">Respuesta SRI: </span>
+                        <span class="small">{{ factura.sri_respuesta }}</span>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Encabezado factura -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="text-muted small mb-1">FACTURA</div>
+                            <div class="fw-800 fs-5">{{ factura.numero_formateado }}</div>
+                            <div class="text-muted small">Fecha: {{ factura.fecha|date:"d/m/Y" }}</div>
+                            <div class="mt-2">
+              <span class="badge {% if factura.estado == 'pagada' %}bg-success{% elif factura.estado == 'pendiente' %}bg-warning text-dark{% elif factura.estado == 'anulada' %}bg-danger{% else %}bg-info{% endif %}">
+                {{ factura.get_estado_display }}
+              </span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 text-sm-end mt-3 mt-sm-0">
+                            <div class="fw-700">{{ factura.paciente.nombre_completo }}</div>
+                            <div class="text-muted small">
+                                CI. {{ factura.paciente.identificacion|default:"Sin cédula" }}</div>
+                            {% if factura.paciente.direccion %}
+                                <div class="text-muted small">{{ factura.paciente.direccion|truncatechars:60 }}</div>{% endif %}
+                            {% if factura.paciente.email %}
+                                <div class="text-muted small">{{ factura.paciente.email }}</div>{% endif %}
+                            {% if factura.paciente.celular %}
+                                <div class="text-muted small">{{ factura.paciente.celular }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detalles -->
+            <div class="card mb-3">
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead style="background:#f8fafc;">
+                        <tr>
+                            <th class="ps-3">Descripción</th>
+                            <th class="text-center" style="width:70px;">Cant.</th>
+                            <th class="text-end" style="width:110px;">P. Unit.</th>
+                            <th class="text-end pe-3" style="width:110px;">Subtotal</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for det in factura.detalles.all %}
+                            <tr>
+                                <td class="ps-3">{{ det.descripcion }}</td>
+                                <td class="text-center">{{ det.cantidad }}</td>
+                                <td class="text-end">{{ det.precio_unitario|currency }}</td>
+                                <td class="text-end pe-3 fw-600">{{ det.subtotal|currency }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">Sin ítems</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                        <tfoot style="background:#f8fafc;">
+                        <tr>
+                            <td colspan="3" class="text-end fw-600 pe-2">Subtotal</td>
+                            <td class="text-end pe-3">{{ factura.subtotal|currency }}</td>
+                        </tr>
+                        {% if factura.descuento %}
+                            <tr>
+                                <td colspan="3" class="text-end fw-600 pe-2 text-danger">Descuento</td>
+                                <td class="text-end pe-3 text-danger">-{{ factura.descuento|currency }}</td>
+                            </tr>
+                        {% endif %}
+                        <tr>
+                            <td colspan="3" class="text-end fw-600 pe-2 text-muted" style="font-size:.8rem;">IVA
+                                (Servicios salud 0%)
+                            </td>
+                            <td class="text-end pe-3 text-muted" style="font-size:.8rem;">$0.00</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" class="text-end fw-800 pe-2 fs-5">TOTAL</td>
+                            <td class="text-end pe-3 fw-800 fs-5 text-success">{{ factura.total|currency }}</td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            {% if factura.notas %}
+                <div class="card mb-3">
+                    <div class="card-body py-2">
+                        <div class="small text-muted fw-700 mb-1">NOTAS</div>
+                        <div class="small">{{ factura.notas }}</div>
+                    </div>
+                </div>
+            {% endif %}
+
+        </div>
+
+        <!-- SIDEBAR -->
+        <div class="col-lg-4">
+
+            <!-- Cambiar estado -->
+            <div class="card mb-3">
+                <div class="card-header fw-700 py-2">Actualizar estado</div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'cambiar_estado_factura' factura.pk %}">
+                        {% csrf_token %}
+                        <div class="mb-2">
+                            <label class="form-label small fw-600">Estado</label>
+                            <select name="estado" class="form-select form-select-sm">
+                                <option value="pendiente" {% if factura.estado == 'pendiente' %}selected{% endif %}>
+                                    Pendiente
+                                </option>
+                                <option value="pagada" {% if factura.estado == 'pagada' %}selected{% endif %}>Pagada
+                                </option>
+                                <option value="parcial" {% if factura.estado == 'parcial' %}selected{% endif %}>Pago
+                                    parcial
+                                </option>
+                                <option value="anulada" {% if factura.estado == 'anulada' %}selected{% endif %}>
+                                    Anulada
+                                </option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-600">Método de pago</label>
+                            <select name="metodo_pago" class="form-select form-select-sm">
+                                <option value="efectivo" {% if factura.metodo_pago == 'efectivo' %}selected{% endif %}>
+                                    Efectivo
+                                </option>
+                                <option value="tarjeta" {% if factura.metodo_pago == 'tarjeta' %}selected{% endif %}>
+                                    Tarjeta
+                                </option>
+                                <option value="transferencia"
+                                        {% if factura.metodo_pago == 'transferencia' %}selected{% endif %}>Transferencia
+                                </option>
+                                <option value="cheque" {% if factura.metodo_pago == 'cheque' %}selected{% endif %}>
+                                    Cheque
+                                </option>
+                                <option value="otro" {% if factura.metodo_pago == 'otro' %}selected{% endif %}>Otro
+                                </option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <i class="bi bi-check me-1"></i>Actualizar
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Info -->
+            <div class="card mb-3">
+                <div class="card-body py-2">
+                    <div class="d-flex flex-column gap-2">
+                        <div class="d-flex justify-content-between small">
+                            <span class="text-muted">Método pago</span>
+                            <span class="fw-600">{{ factura.get_metodo_pago_display }}</span>
+                        </div>
+                        {% if factura.consulta %}
+                            <div class="d-flex justify-content-between small">
+                                <span class="text-muted">Consulta</span>
+                                <a href="{% url 'detalle_consulta' factura.consulta.pk %}"
+                                   class="fw-600">#{{ factura.consulta.pk }}</a>
+                            </div>
+                        {% endif %}
+                        <div class="d-flex justify-content-between small">
+                            <span class="text-muted">Paciente</span>
+                            <a href="{% url 'ficha_paciente' factura.paciente.pk %}" class="fw-600">Ver ficha</a>
+                        </div>
+                        <div class="d-flex justify-content-between small">
+                            <span class="text-muted">Creada</span>
+                            <span>{{ factura.created_at|date:"d/m/Y H:i" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SRI XML (solo si hay) -->
+            {% if factura.sri_xml %}
+                <div class="card">
+                    <div class="card-header fw-700 py-2 d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-file-code me-1 text-primary"></i>XML SRI</span>
+                        <button class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2"
+                                onclick="document.getElementById('xmlBlock').classList.toggle('d-none')">
+                            Ver/Ocultar
+                        </button>
+                    </div>
+                    <div class="card-body d-none" id="xmlBlock">
+                        <textarea class="form-control font-monospace" style="font-size:.65rem;height:200px;"
+                                  readonly>{{ factura.sri_xml }}</textarea>
+                    </div>
+                </div>
+            {% endif %}
+
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        async function enviarSRI() {
+            const btn = document.querySelector('[onclick="enviarSRI()"]');
+
+            const confirmacion = await Swal.fire({
+                title: '¿Enviar factura?',
+                text: 'Se enviará al SRI para autorización',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, enviar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#198754',
+                reverseButtons: true
+            });
+
+            if (!confirmacion.isConfirmed) return;
+
+            try {
+                btn.disabled = true;
+
+                Swal.fire({
+                    title: 'Enviando al SRI...',
+                    text: 'Por favor espere',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                const response = await fetch('{% url "enviar_sri_factura" factura.pk %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.ok) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Enviado correctamente',
+                        text: data.mensaje,
+                        confirmButtonColor: '#198754'
+                    });
+
+                    location.reload();
+
+                } else {
+                    throw new Error(data.mensaje);
+                }
+
+            } catch (error) {
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message || 'Error de conexión',
+                    confirmButtonColor: '#dc3545'
+                });
+
+                btn.disabled = false;
+
+            } finally {
+                btn.innerHTML = '<i class="bi bi-send-check me-1"></i>Enviar SRI';
+            }
+        }
+
+        async function reiniciarXml() {
+            const btn = document.querySelector('[onclick="reiniciarXml()"]');
+
+            const confirmacion = await Swal.fire({
+                title: '¿Reiniciar XML?',
+                text: 'Se reiniciará todo el proceso de la factura.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, reiniciar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#198754',
+                reverseButtons: true
+            });
+
+            if (!confirmacion.isConfirmed) return;
+
+            try {
+                btn.disabled = true;
+
+                Swal.fire({
+                    title: 'Reiniciando proceso...',
+                    text: 'Por favor espere',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                const response = await fetch('{% url "reiniciar_factura" factura.pk %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.ok) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Enviado correctamente',
+                        text: data.mensaje,
+                        confirmButtonColor: '#198754'
+                    });
+
+                    location.reload();
+
+                } else {
+                    throw new Error(data.mensaje);
+                }
+
+            } catch (error) {
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message || 'Error de conexión',
+                    confirmButtonColor: '#dc3545'
+                });
+
+                btn.disabled = false;
+
+            } finally {
+                btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Reiniciar xml';
+            }
+        }
+    </script>
+{% endblock %}

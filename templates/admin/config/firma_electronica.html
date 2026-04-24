@@ -1,0 +1,231 @@
+{% extends "base/admin_base.html" %}
+{% load tags %}
+{% block title %}Firma Electrónica SRI{% endblock %}
+{% block page_title %}Configuración · Firma Electrónica SRI{% endblock %}
+
+{% block extra_css %}
+<style>
+.cert-card { border-radius:12px; padding:1.25rem; border:1px solid; }
+.cert-ok   { background:#f0fdf4; border-color:#86efac; }
+.cert-err  { background:#fef2f2; border-color:#fca5a5; }
+.cert-none { background:#f8fafc; border-color:#e2e8f0; }
+.env-btn   { padding:.6rem 1.25rem; border-radius:10px; cursor:pointer; border:2px solid;
+             transition:all .15s; text-align:center; }
+.env-btn.active { font-weight:700; }
+.env-pruebas.active  { background:#dbeafe; border-color:#3b82f6; color:#1e40af; }
+.env-produccion.active { background:#fef3c7; border-color:#f59e0b; color:#92400e; }
+.env-btn:not(.active) { background:#f8fafc; border-color:#e2e8f0; color:#94a3b8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+  <!-- LEFT: Formulario -->
+  <div class="col-lg-7">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <!-- Ambiente SRI -->
+      <div class="card mb-3">
+        <div class="card-header fw-700 py-2">
+          <i class="bi bi-cloud-arrow-up me-2 text-primary"></i>Ambiente SRI
+        </div>
+        <div class="card-body">
+          <div class="d-flex gap-3">
+            <label class="env-btn env-pruebas {% if clinica.sri_ambiente == '1' %}active{% endif %} flex-fill" id="lbl1">
+              <input type="radio" name="sri_ambiente" value="1" class="d-none"
+                     {% if clinica.sri_ambiente == '1' %}checked{% endif %}
+                     onchange="setEnv('1')">
+              <div class="fw-700">🧪 Pruebas</div>
+              <div style="font-size:.75rem;margin-top:.25rem;">
+                celcer.sri.gob.ec<br>
+                <span style="opacity:.7;">Para desarrollo y testing</span>
+              </div>
+            </label>
+            <label class="env-btn env-produccion {% if clinica.sri_ambiente == '2' %}active{% endif %} flex-fill" id="lbl2">
+              <input type="radio" name="sri_ambiente" value="2" class="d-none"
+                     {% if clinica.sri_ambiente == '2' %}checked{% endif %}
+                     onchange="setEnv('2')">
+              <div class="fw-700">🚀 Producción</div>
+              <div style="font-size:.75rem;margin-top:.25rem;">
+                cel.sri.gob.ec<br>
+                <span style="opacity:.7;">Facturas reales al SRI</span>
+              </div>
+            </label>
+          </div>
+          {% if clinica.sri_ambiente == '2' %}
+          <div class="alert alert-warning mt-3 py-2 mb-0 small">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            <strong>Ambiente de Producción:</strong> Las facturas generadas serán enviadas al SRI Ecuador como comprobantes reales.
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Certificado P12 -->
+      <div class="card mb-3">
+        <div class="card-header fw-700 py-2">
+          <i class="bi bi-shield-lock me-2 text-success"></i>Certificado de Firma Electrónica (P12)
+        </div>
+        <div class="card-body">
+          {% if clinica.certificado_p12 %}
+          <div class="cert-card {% if cert_info and not cert_info.error %}cert-ok{% elif cert_info.error %}cert-err{% else %}cert-none{% endif %} mb-3">
+            {% if cert_info and not cert_info.error %}
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-patch-check-fill text-success fs-5"></i>
+              <span class="fw-700 text-success">Certificado válido y cargado</span>
+            </div>
+            <div class="row g-2 small">
+              <div class="col-12">
+                <span class="text-muted">Titular:</span>
+                <span class="fw-600">{{ cert_info.subject }}</span>
+              </div>
+              <div class="col-sm-6">
+                <span class="text-muted">Válido desde:</span>
+                <span>{{ cert_info.valid_from|date:"d/m/Y" }}</span>
+              </div>
+              <div class="col-sm-6">
+                <span class="text-muted">Válido hasta:</span>
+                <span class="{% if cert_info.valid_to < now %}text-danger fw-700{% else %}text-success fw-700{% endif %}">
+                  {{ cert_info.valid_to|date:"d/m/Y" }}
+                </span>
+              </div>
+            </div>
+            {% elif cert_info.error %}
+            <div class="d-flex align-items-center gap-2 text-danger">
+              <i class="bi bi-x-circle-fill fs-5"></i>
+              <span class="fw-700">Error al leer certificado: {{ cert_info.error }}</span>
+            </div>
+            {% else %}
+            <div class="text-muted small">
+              <i class="bi bi-file-earmark-lock me-1"></i>
+              Certificado: {{ clinica.certificado_p12.name|slice:"15:" }}
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          <div class="mb-3">
+            <label class="form-label fw-600">
+              FirmaElectronica.jar <span class="badge bg-success ms-1">Recomendado</span>
+            </label>
+            <input type="file" name="firma_ec_jar" class="form-control" accept=".jar">
+            {% if clinica.firma_ec_jar %}
+            <div class="form-text text-success">
+              <i class="bi bi-check-circle-fill me-1"></i>
+              Jar cargado — se usará para firmar
+            </div>
+            {% else %}
+            <div class="form-text">
+              Sube el <strong>FirmaElectronica.jar</strong> de tu proveedor de certificados o del portal SRI.
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-600">
+              JAVA_HOME <span class="text-muted fw-400">(opcional)</span>
+            </label>
+            <input type="text" name="java_home" class="form-control font-monospace"
+                   value="{{ clinica.java_home }}"
+                   placeholder="Ej: /usr/lib/jvm/java-17-openjdk  o  C:\Program Files\Java\jdk-17">
+            <div class="form-text">
+              Ruta al directorio de Java. Déjalo vacío para usar el Java del PATH del sistema.
+              Equivale a la variable <code>JAVA_18_HOME</code> del sistema de referencia.
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-600">
+              Certificado P12 {% if clinica.certificado_p12 %}(subir nuevo){% else %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            <input type="file" name="certificado_p12" class="form-control" accept=".p12,.pfx">
+            <div class="form-text">
+              Archivo .p12 o .pfx otorgado por: BCE, Security Data, ANF AC Ecuador, etc.
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-600">
+              Contraseña del certificado {% if not clinica.clave_certificado %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            <div class="input-group">
+              <input type="password" name="clave_certificado" id="claveCert" class="form-control"
+                     placeholder="{% if clinica.clave_certificado %}••••••• (dejar vacío para no cambiar){% else %}Contraseña del P12{% endif %}">
+              <button type="button" class="btn btn-outline-secondary" id="toggleClave">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="alert alert-info py-2 small mb-0">
+            <i class="bi bi-info-circle me-1"></i>
+            La contraseña se almacena encriptada. El certificado P12 debe ser el mismo con el que está registrado en el SRI.
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-success fw-700 px-4">
+          <i class="bi bi-save me-1"></i>Guardar configuración
+        </button>
+        <a href="{% url 'config_clinica' %}" class="btn btn-outline-secondary">Ir a Clínica</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- RIGHT: Info y pasos -->
+  <div class="col-lg-5">
+    <div class="card mb-3" style="background:#0f172a;color:#e2e8f0;">
+      <div class="card-body">
+        <div class="fw-700 mb-3" style="color:#38bdf8;"><i class="bi bi-list-check me-2"></i>Pasos para activar facturación electrónica</div>
+        <div class="d-flex flex-column gap-3">
+          {% for paso in "1,2,3,4,5"|split:"," %}
+          {% endfor %}
+          <div class="d-flex gap-2">
+            <div style="width:24px;height:24px;background:#3b82f6;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;">1</div>
+            <div class="small"><strong style="color:#7dd3fc;">Obtener token SRI</strong><br><span style="color:#94a3b8;">Ingresar al portal del SRI y activar el servicio de comprobantes electrónicos para su RUC.</span></div>
+          </div>
+          <div class="d-flex gap-2">
+            <div style="width:24px;height:24px;background:#3b82f6;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;">2</div>
+            <div class="small"><strong style="color:#7dd3fc;">Adquirir certificado digital</strong><br><span style="color:#94a3b8;">Obtener certificado P12 en: BCE (Banco Central), Security Data, ANF AC Ecuador o Uanataca.</span></div>
+          </div>
+          <div class="d-flex gap-2">
+            <div style="width:24px;height:24px;background:#3b82f6;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;">3</div>
+            <div class="small"><strong style="color:#7dd3fc;">Configurar RUC y serie</strong><br><span style="color:#94a3b8;">En <a href="{% url 'config_clinica' %}" style="color:#7dd3fc;">Configuración → Clínica</a>: RUC, razón social, serie establecimiento (001) y punto de emisión (001).</span></div>
+          </div>
+          <div class="d-flex gap-2">
+            <div style="width:24px;height:24px;background:#10b981;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;">4</div>
+            <div class="small"><strong style="color:#86efac;">Subir FIRMA_EC.jar y P12</strong><br><span style="color:#94a3b8;">En esta pantalla: sube el <code style="color:#7dd3fc;">FIRMA_EC.jar</code> (firma válida para SRI), el .p12 y la contraseña. Java debe estar instalado en el servidor.</span></div>
+          </div>
+          <div class="d-flex gap-2">
+            <div style="width:24px;height:24px;background:#10b981;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;">5</div>
+            <div class="small"><strong style="color:#86efac;">Probar en ambiente de pruebas</strong><br><span style="color:#94a3b8;">Genera una factura y usa el botón "Enviar SRI" para verificar que la integración funciona.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="background:#fffbeb;border-color:#fcd34d;">
+      <div class="card-body py-3 small">
+        <div class="fw-700 mb-1"><i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>Nota sobre IVA</div>
+        <p class="mb-1">Los servicios odontológicos en Ecuador están gravados con <strong>tarifa 0% de IVA</strong> según el Art. 55 de la LORTI (servicios de salud).</p>
+        <p class="mb-0">DentixPro aplica automáticamente tarifa 0% en todas las facturas.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function setEnv(v) {
+  document.getElementById('lbl1').classList.toggle('active', v==='1');
+  document.getElementById('lbl2').classList.toggle('active', v==='2');
+}
+document.getElementById('toggleClave')?.addEventListener('click', function() {
+  const inp = document.getElementById('claveCert');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  this.querySelector('i').className = `bi bi-eye${inp.type==='text'?'-slash':''}`;
+});
+</script>
+{% endblock %}

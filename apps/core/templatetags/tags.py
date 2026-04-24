@@ -609,6 +609,42 @@ def mul(value, arg):
     except (ValueError, TypeError):
         return 0
 
+@register.filter
+def split(value, arg):
+    """Split string by delimiter: {{ "a,b,c"|split:"," }}"""
+    return str(value).split(arg)
+
+@register.filter
+def currency(value):
+    try:
+        return f"${float(value):,.2f}"
+    except (ValueError, TypeError):
+        return '$0.00'
+
+@register.filter
+def limpiar_texto_xml(texto, quitar_tildes=True):
+    import unicodedata, re
+    if not texto:
+        return ''
+
+    # 🔹 asegurar string
+    texto = str(texto)
+
+    # 🔹 normalizar unicode
+    texto = unicodedata.normalize('NFKD', texto)
+
+    if quitar_tildes:
+        # eliminar tildes (acentos)
+        texto = ''.join(c for c in texto if not unicodedata.combining(c))
+
+    # 🔹 eliminar caracteres no válidos XML
+    texto = re.sub(r'[^\x09\x0A\x0D\x20-\x7E]', '', texto)
+
+    # 🔹 limpiar espacios extra
+    texto = texto.strip()
+
+    return texto
+
 
 register.filter('diaenletra', diaenletra)
 register.filter('ceros', ceros)
@@ -653,3 +689,4 @@ register.filter("title2", title2)
 register.filter("iniciales", iniciales)
 register.filter("fecha_completa_limite_indicador", fecha_completa_limite_indicador)
 register.filter("formatear_numero", formatear_numero)
+register.filter("split", split)

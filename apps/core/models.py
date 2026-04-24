@@ -59,3 +59,41 @@ class Usuario(AbstractUser):
 
     def __str__(self):
         return f"{self.nombre_completo} [{self.get_rol_display()}]"
+
+class ActiveManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(status=True)
+
+class Clinica(ModeloBase):
+    nombre = models.CharField(max_length=500, default='Symetricare')
+    ruc = models.CharField(max_length=20, blank=True)
+    razon_social = models.CharField(max_length=200, blank=True)
+    nombre_comercial = models.CharField(max_length=150, blank=True)
+    direccion = models.TextField(blank=True)
+    telefono = models.CharField(max_length=30, blank=True)
+    email = models.EmailField(blank=True)
+    logo = models.ImageField(upload_to='clinica/', blank=True, null=True)
+    color_primario = models.CharField(max_length=7, default='#0d6efd')
+    ciudad = models.CharField(max_length=100, blank=True)
+    pais = models.CharField(max_length=100, default='Ecuador')
+    # SRI Ecuador
+    contribuyente_especial = models.CharField(max_length=20, blank=True)
+    obligado_contabilidad = models.BooleanField(default=False)
+    serie_establecimiento = models.CharField(max_length=3, default='001')
+    serie_punto_emision = models.CharField(max_length=3, default='001')
+    sri_ambiente = models.CharField(max_length=1, choices=[('1','Pruebas'),('2','Produccion')], default='1')
+    certificado_p12 = models.FileField(upload_to='certificados/', blank=True, null=True)
+    clave_certificado = models.CharField(max_length=200, blank=True)
+    firma_ec_jar = models.FileField(upload_to='certificados/', blank=True, null=True, verbose_name='FirmaElectronica.jar', help_text='Archivo FirmaElectronica.jar para firma XAdES-BES')
+    java_home = models.CharField(max_length=300, blank=True, verbose_name='JAVA_HOME', help_text='Ruta al directorio de Java 8/17/21 (ej: /usr/lib/jvm/java-17-openjdk). ' 'Vacío = usar el Java del PATH del sistema.')
+
+    class Meta:
+        verbose_name = 'Clinica'
+
+    def __str__(self):
+        return self.nombre
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

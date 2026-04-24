@@ -1,0 +1,75 @@
+{% load tags%}<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<factura id="comprobante" version="1.1.0">
+    <infoTributaria>
+        <ambiente>{{ clinica.sri_ambiente }}</ambiente>
+        <tipoEmision>1</tipoEmision>
+        <razonSocial>{{ clinica.razon_social|default:clinica.nombre|limpiar_texto_xml }}</razonSocial>
+        <nombreComercial>{{ clinica.nombre_comercial|default:clinica.nombre|limpiar_texto_xml }}</nombreComercial>
+        <ruc>{{ ruc }}</ruc>
+        <claveAcceso>{{ factura.clave_acceso }}</claveAcceso>
+        <codDoc>01</codDoc>
+        <estab>{{ clinica.serie_establecimiento }}</estab>
+        <ptoEmi>{{ clinica.serie_punto_emision }}</ptoEmi>
+        <secuencial>{{ factura.numero }}</secuencial>
+        <dirMatriz>{{ clinica.direccion|limpiar_texto_xml }}</dirMatriz>
+    </infoTributaria>
+    <infoFactura>
+        <fechaEmision>{{ factura.fecha|date:"d/m/Y" }}</fechaEmision>
+        <dirEstablecimiento>{{ clinica.direccion|limpiar_texto_xml }}</dirEstablecimiento>
+        {% if clinica.contribuyente_especial %}<contribuyenteEspecial>{{ clinica.contribuyente_especial }}</contribuyenteEspecial>{% endif %}
+        <obligadoContabilidad>{% if clinica.obligado_contabilidad %}SI{% else %}NO{% endif %}</obligadoContabilidad>
+        <tipoIdentificacionComprador>{{ tipo_id_comprador }}</tipoIdentificacionComprador>
+        <razonSocialComprador>{{ factura.paciente.nombre_completo|limpiar_texto_xml }}</razonSocialComprador>
+        <identificacionComprador>{{ identificacion_comprador }}</identificacionComprador>
+        {% if factura.paciente.direccion %}<direccionComprador>{{ factura.paciente.direccion|limpiar_texto_xml }}</direccionComprador>{% endif %}
+        <totalSinImpuestos>{{ factura.subtotal|stringformat:"0.2f" }}</totalSinImpuestos>
+        <totalDescuento>{{ factura.descuento|stringformat:"0.2f" }}</totalDescuento>
+        <totalConImpuestos>
+            <totalImpuesto>
+                <codigo>2</codigo>
+                <codigoPorcentaje>0</codigoPorcentaje>
+                <baseImponible>{{ factura.subtotal|stringformat:"0.2f" }}</baseImponible>
+                <valor>0.00</valor>
+            </totalImpuesto>
+        </totalConImpuestos>
+        <propina>0.00</propina>
+        <importeTotal>{{ factura.total|stringformat:"0.2f" }}</importeTotal>
+        <moneda>DOLAR</moneda>
+        <pagos>
+            <pago>
+                <formaPago>{{ codigo_forma_pago }}</formaPago>
+                <total>{{ factura.total|stringformat:"0.2f" }}</total>
+                <plazo>0</plazo>
+                <unidadTiempo>dias</unidadTiempo>
+            </pago>
+        </pagos>
+    </infoFactura>
+    <detalles>
+        {% for det in factura.detalles.all %}
+        <detalle>
+            <codigoPrincipal>{{ det.codigo_principal|default:det.pk }}</codigoPrincipal>
+            <descripcion>{{ det.descripcion|limpiar_texto_xml }}</descripcion>
+            <cantidad>{{ det.cantidad|stringformat:"0.2f" }}</cantidad>
+            <precioUnitario>{{ det.precio_unitario|stringformat:"0.2f" }}</precioUnitario>
+            <descuento>{{ det.descuento|stringformat:"0.2f" }}</descuento>
+            <precioTotalSinImpuesto>{{ det.subtotal|stringformat:"0.2f" }}</precioTotalSinImpuesto>
+            <impuestos>
+                <impuesto>
+                    <codigo>2</codigo>
+                    <codigoPorcentaje>0</codigoPorcentaje>
+                    <tarifa>0</tarifa>
+                    <baseImponible>{{ det.subtotal|stringformat:"0.2f" }}</baseImponible>
+                    <valor>0.00</valor>
+                </impuesto>
+            </impuestos>
+        </detalle>
+        {% endfor %}
+    </detalles>
+    {% if factura.paciente.email or factura.paciente.celular %}
+    <infoAdicional>
+        {% if factura.paciente.email %}<campoAdicional nombre="email">{{ factura.paciente.email }}</campoAdicional>{% endif %}
+        {% if factura.paciente.celular %}<campoAdicional nombre="telefono">{{ factura.paciente.celular }}</campoAdicional>{% endif %}
+        {% if factura.notas %}<campoAdicional nombre="observaciones">{{ factura.notas|limpiar_texto_xml }}</campoAdicional>{% endif %}
+    </infoAdicional>
+    {% endif %}
+</factura>

@@ -48,12 +48,15 @@
 
     {% if request.user.es_admin %}
     <div class="sb-section mt-1">Finanzas</div>
+    <a href="/finanzas/facturas/" class="sb-link {% block fac_fin %}{% endblock %}"><i class="bi bi-graph-up"></i>Facturas</a>
     <a href="/finanzas/" class="sb-link {% block n_fin %}{% endblock %}"><i class="bi bi-graph-up"></i>Estado de Cuentas</a>
     <a href="/finanzas/movimientos/" class="sb-link {% block n_mov %}{% endblock %}"><i class="bi bi-arrow-left-right"></i>Movimientos</a>
     {% endif %}
 
     {% if request.user.es_admin %}
     <div class="sb-section mt-1">Configuración</div>
+    <a href="/config/clinica/" class="sb-link {% block est_disp %}{% endblock %}"><i class="bi bi-clock"></i>Establecimiento</a>
+    <a href="/config/firma/" class="sb-link {% block firm_disp %}{% endblock %}"><i class="bi bi-clock"></i>Firma Electrónica</a>
     <a href="/citas/disponibilidad/" class="sb-link {% block n_disp %}{% endblock %}"><i class="bi bi-clock"></i>Disponibilidad</a>
     <a href="/config/usuarios/" class="sb-link {% block n_usr %}{% endblock %}"><i class="bi bi-person-gear"></i>Usuarios</a>
     {% endif %}

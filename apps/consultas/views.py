@@ -11,6 +11,47 @@ from apps.core.helpers import adduserdata, MiPaginador
 from .models import Consulta, TratamientoPropuesto, VisitaTratamiento, AbonoConsulta
 from apps.finanzas.models import MovimientoFinanciero
 
+from decimal import Decimal
+from django.db.models import Sum
+
+def get_visita_activa(consulta, servicio):
+    visitas = (
+        VisitaTratamiento.objects
+        .filter(
+            status=True,
+            consulta=consulta,
+            servicio=servicio,
+            tipo_servicio=servicio.tipo,
+            contabilizar_costo=True
+        )
+        .order_by('id')  # más antigua primero
+    )
+
+    for v in visitas:
+        total_costo = Decimal(v.costo or 0)
+
+        abonos_inicial = Decimal(v.get_total_abonos_visita(consulta) or 0)
+
+        visitas_ids = VisitaTratamiento.objects.filter(
+            status=True,
+            siguiente_visita=v,
+            consulta=consulta
+        ).exclude(id=v.id).values_list('id', flat=True)
+
+        abonos_posteriores = Decimal(
+            AbonoConsulta.objects.filter(
+                status=True,
+                consulta=consulta,
+                visita_id__in=visitas_ids, visita__contabilizar_costo=False
+            ).aggregate(total=Sum('monto'))['total'] or 0
+        )
+
+        total_abonos = abonos_inicial + abonos_posteriores
+
+        if total_abonos < total_costo:
+            return v, total_costo, total_abonos  # 👈 visita activa
+
+    return None, Decimal(0), Decimal(0)  # 👈 todo pagado
 
 @login_required(redirect_field_name='ret', login_url='/login')
 @transaction.atomic()
@@ -130,20 +171,23 @@ def view_consultas(request):
 
                 costo = request.POST.get('costo', '')
                 abono = request.POST.get('abono', 0)
+                visita_inicial, total_costo, total_abonos = get_visita_activa(consulta, srv)
+
                 contabilizar_costo = True
-                tiene_mismo_tratamiento = VisitaTratamiento.objects.filter(status=True, consulta=consulta,
-                                                                           servicio=srv, tipo_servicio=srv.tipo).first()
-                if tiene_mismo_tratamiento:
-                    total_costo = tiene_mismo_tratamiento.costo
-                    total_abonado = (consulta.visitas.filter(status=True, servicio=srv, tipo_servicio=srv.tipo).aggregate(t=Sum('abono'))['t'] or 0)
-                    if Decimal(total_abonado) < Decimal(total_costo):
-                        contabilizar_costo = False
-                    saldo_restante = Decimal(total_costo) - Decimal(total_abonado)
-                    total_abonado_actual = Decimal(total_abonado) + Decimal(abono)
-                    if total_abonado_actual > Decimal(total_costo):
-                        mensaje = f"El total abonado supera el costo del tratamiento. Saldo restante del servicio {srv.nombre} ${saldo_restante}"
-                        return JsonResponse({'result': False,
-                                             'msg': mensaje})
+
+                if visita_inicial:
+                    contabilizar_costo = False
+
+                    saldo_restante = total_costo - total_abonos
+                    total_abonado_actual = total_abonos + Decimal(abono or 0)
+
+                    if total_abonado_actual > total_costo:
+                        return JsonResponse({
+                            'result': False,
+                            'msg': f"El total abonado supera el costo del tratamiento. "
+                                   f"Saldo restante del servicio {srv.nombre}: ${saldo_restante:.2f}"
+                        })
+
 
                 visita = VisitaTratamiento.objects.create(
                     consulta              = consulta,
@@ -158,6 +202,9 @@ def view_consultas(request):
                     contabilizar_costo    = contabilizar_costo,
                     usuario_creacion      = request.user,
                 )
+                if visita_inicial:
+                    visita.siguiente_visita = visita_inicial
+                    visita.save()
                 visita.registrar_historial()
                 # recalcular_totales() se llama en VisitaTratamiento.save()
                 monto = float(request.POST.get('abono', 0))
@@ -439,13 +486,18 @@ def view_consultas(request):
                 from apps.servicios.models import Servicio
                 consulta = get_object_or_404(Consulta, pk=request.GET.get('id'))
                 servicio = Servicio.objects.get(pk=request.GET.get('idservicio'))
-                tiene_mismo_tratamiento = VisitaTratamiento.objects.filter(
-                    status=True,
-                    consulta=consulta,
-                    servicio_id=servicio,
-                    tipo_servicio=servicio.tipo
-                ).exists()
-                return JsonResponse({'result': tiene_mismo_tratamiento})
+                no_puede_registrar = False
+                for tratamiento_ in VisitaTratamiento.objects.filter(status=True, consulta=consulta, servicio_id=servicio, tipo_servicio=servicio.tipo, contabilizar_costo=True):
+                    total_costo = tratamiento_.costo
+                    abonos_visita_inicial = tratamiento_.get_total_abonos_visita(consulta)
+                    visitas_posteriores = VisitaTratamiento.objects.filter(status=True, siguiente_visita=tratamiento_, consulta=consulta).values_list('id', flat=True)
+                    abonos_visitas_posteriores = AbonoConsulta.objects.filter(status=True, consulta=consulta, visita_id__in=visitas_posteriores).aggregate(t=Sum('monto'))['t'] or 0
+                    total_abonos = Decimal(abonos_visita_inicial) + Decimal(abonos_visitas_posteriores)
+                    if Decimal(total_abonos) == Decimal(total_costo):
+                        no_puede_registrar = False
+                    else:
+                        no_puede_registrar = True
+                return JsonResponse({'result': no_puede_registrar})
             except Exception as ex:
                 return JsonResponse({'result': False, 'msg': str(ex)})
 

@@ -10,4 +10,6 @@ from . import config_views
 from django.urls import path as _path
 urlpatterns += [
     _path('config/usuarios/', config_views.view_usuarios, name='config_usuarios'),
+    _path('config/clinica/', views.config_clinica, name='config_clinica'),
+    _path('config/firma/', views.config_firma, name='config_firma'),
 ]

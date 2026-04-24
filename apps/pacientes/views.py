@@ -71,6 +71,7 @@ def view_pacientes(request):
 
     else:
         action = request.GET.get('action', '')
+
         if action in ('add', 'edit'):
             pac = None
             if action == 'edit':
@@ -89,6 +90,57 @@ def view_pacientes(request):
                  'identificacion': p.identificacion,
                  'telefono': p.telefono}
                 for p in qs]})
+
+        elif action == 'get_consultas_paciente':
+            from apps.consultas.models import Consulta
+            paciente_id = request.GET.get('paciente_id')
+            consultas = Consulta.objects.filter(
+                status=True, paciente_id=paciente_id, estado='atendida'
+            ).order_by('-fecha_creacion')
+            result = []
+            for c in consultas:
+                n_visitas = c.visitas.filter(status=True).count()
+                result.append({
+                    'id':             c.id,
+                    'fecha_creacion': c.fecha_creacion.strftime('%d/%m/%Y'),
+                    'motivo':         c.motivo_consulta or '',
+                    'detalle':        c.observaciones or '',
+                    'n_visitas':      n_visitas,
+                    'total':          str(c.abono),
+                    'estado':         c.estado,
+                    'estado_display':         c.get_estado_display(),
+                })
+            return JsonResponse({'data': result})
+
+
+        elif action == 'get_tratamientos_consulta':
+            from apps.consultas.models import Consulta, VisitaTratamiento
+            from django.db.models import Sum
+            from decimal import Decimal
+            consulta_id = request.GET.get('consulta_id')
+            if not consulta_id:
+                return JsonResponse({'result': False, 'msg': 'consulta_id requerido'})
+            try:
+                consulta = Consulta.objects.get(pk=consulta_id, status=True)
+            except Consulta.DoesNotExist:
+                return JsonResponse({'result': False, 'msg': 'Consulta no encontrada'})
+            tratos = (VisitaTratamiento.objects.filter(status=True, consulta=consulta,
+                                                       contabilizar_costo=True).select_related('servicio', 'tipo_servicio').order_by('id'))
+            result = []
+            for t in tratos:
+                total_costo = Decimal(t.costo or 0)
+                abonos_inicial = Decimal(t.get_total_abonos_visita(consulta) or 0)
+                visitas_ids = VisitaTratamiento.objects.filter(status=True, siguiente_visita=t, consulta=consulta).values_list('id', flat=True)
+                abonos_posteriores = Decimal(consulta.abonos.filter(status=True, visita_id__in=visitas_ids).aggregate(total=Sum('monto'))['total'] or 0)
+                total_abonos = abonos_inicial + abonos_posteriores
+                saldo = total_costo - total_abonos
+                if total_abonos > 0:
+                    result.append({'id': t.pk, 'nombre': t.servicio.nombre,
+                                   'tipo': t.tipo_servicio.nombre if t.tipo_servicio else '',
+                                   'color': t.tipo_servicio.color if t.tipo_servicio else '#6366f1',
+                        'abonado': Decimal(total_abonos), 'fecha_visita': t.fecha.strftime('%d/%m/%Y'), 'descripcion': t.descripcion or '',})
+
+            return JsonResponse({'result': True, 'motivo': consulta.motivo_consulta, 'data': result,})
 
         else:
             search = request.GET.get('s', '')
@@ -127,48 +179,28 @@ def view_ficha(request, pk):
         'tratamientos_realizados',
     ).order_by('-fecha_creacion')[:30]
 
-    # Agregar todos los antecedentes de todas las consultas para los tabs
-    todos_apf   = []
-    todos_app   = []
-    todas_alg   = []
-    todos_med   = []
-    todos_sup   = []
-    todos_hab   = []
-    todos_act   = []
-    todos_tr    = []
+    todos_apf = []; todos_app = []; todas_alg = []; todos_med = []
+    todos_sup = []; todos_hab = []; todos_act = []; todos_tr  = []
 
     for c in consultas:
-        for a in c.apf.filter(status=True):
-            todos_apf.append((c, a))
-        for a in c.app.filter(status=True):
-            todos_app.append((c, a))
-        for a in c.alergias.filter(status=True):
-            todas_alg.append((c, a))
-        for m in c.medicamentos.filter(status=True):
-            todos_med.append((c, m))
-        for s in c.suplementos.filter(status=True):
-            todos_sup.append((c, s))
-        for h in c.habitos.filter(status=True):
-            todos_hab.append((c, h))
-        for a in c.actividades_fisicas.filter(status=True):
-            todos_act.append((c, a))
-        for t in c.tratamientos_realizados.filter(status=True):
-            todos_tr.append((c, t))
+        for a in c.apf.filter(status=True):             todos_apf.append((c, a))
+        for a in c.app.filter(status=True):             todos_app.append((c, a))
+        for a in c.alergias.filter(status=True):        todas_alg.append((c, a))
+        for m in c.medicamentos.filter(status=True):    todos_med.append((c, m))
+        for s in c.suplementos.filter(status=True):     todos_sup.append((c, s))
+        for h in c.habitos.filter(status=True):         todos_hab.append((c, h))
+        for a in c.actividades_fisicas.filter(status=True): todos_act.append((c, a))
+        for t in c.tratamientos_realizados.filter(status=True): todos_tr.append((c, t))
 
     data.update({
-        'title':    f'Ficha — {pac.nombre_completo}',
-        'pac':      pac,
+        'title':     f'Ficha — {pac.nombre_completo}',
+        'pac':       pac,
         'consultas': consultas,
-        'citas':    pac.citas.filter(status=True).order_by('-fecha')[:10],
-        # Tabs antecedentes
-        'todos_apf':  todos_apf,
-        'todos_app':  todos_app,
-        'todas_alg':  todas_alg,
-        'todos_med':  todos_med,
-        'todos_sup':  todos_sup,
-        'todos_hab':  todos_hab,
-        'todos_act':  todos_act,
-        'todos_tr':   todos_tr,
+        'citas':     pac.citas.filter(status=True).order_by('-fecha')[:10],
+        'todos_apf': todos_apf, 'todos_app': todos_app,
+        'todas_alg': todas_alg, 'todos_med': todos_med,
+        'todos_sup': todos_sup, 'todos_hab': todos_hab,
+        'todos_act': todos_act, 'todos_tr':  todos_tr,
     })
     try:
         pac.cuenta.recalcular()

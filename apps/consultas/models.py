@@ -83,6 +83,11 @@ class Consulta(ModeloBase):
         from django.db.models import Sum
         return (self.abonos.filter(status=True, visita_id=idvisita).aggregate(t=Sum('monto'))['t'] or 0)
 
+    def get_total_abonos_visitas_no_contabilizados(self, idvisita):
+        from django.db.models import Sum
+        visita_ = VisitaTratamiento.objects.get(id=idvisita)
+        return (self.abonos.filter(status=True, servicio=visita_.servicio, tipo_servicio=visita_.tipo_servicio).exclude(visita_id=idvisita).aggregate(t=Sum('monto'))['t'] or 0)
+
     def get_total_saldo_visita(self, idvisita):
         from django.db.models import Sum
         visita_ = VisitaTratamiento.objects.get(id=idvisita)
@@ -122,8 +127,8 @@ class VisitaTratamiento(ModeloBase):
     Tratamiento realizado en una visita concreta.
     ESTE modelo genera la deuda — cada registro suma al total de la consulta.
     """
-    consulta              = models.ForeignKey(Consulta, on_delete=models.CASCADE,
-                              related_name='visitas')
+    siguiente_visita      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='visitas', null=True, blank=True)
+    consulta              = models.ForeignKey(Consulta, on_delete=models.CASCADE, related_name='visitas')
     fecha                 = models.DateField()
     tratamiento_propuesto = models.ForeignKey(TratamientoPropuesto,
                               null=True, blank=True, on_delete=models.SET_NULL,
@@ -168,6 +173,10 @@ class VisitaTratamiento(ModeloBase):
 
     def get_abonos(self):
         return self.visitasconsulta.filter(status=True)
+
+    def get_total_abonos_visita(self, consulta):
+        from django.db.models import Sum
+        return (self.visitasconsulta.filter(status=True, consulta=consulta).aggregate(t=Sum('monto'))['t'] or 0)
 
 class HistorialAbonoVisitaTratamiento(ModeloBase):
     """Pagos parciales del paciente."""
